@@ -1,0 +1,16 @@
+services:
+  ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/home/rosuser/ws/src/arips_ros2
+      - /dev:/dev
+    group_add:
+      - dialout
+    privileged: true
+    network_mode: host
+    ipc: host
+    stdin_open: true
+    tty: true
+    command: bash

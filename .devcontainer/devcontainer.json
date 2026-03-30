@@ -1,0 +1,17 @@
+{
+    "name": "arips_ros2",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "ros2",
+    "workspaceFolder": "/home/rosuser/ws/src/arips_ros2",
+    "remoteUser": "rosuser",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-iot.vscode-ros",
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-python.python"
+            ]
+        }
+    }
+}
