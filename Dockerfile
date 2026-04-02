@@ -1,5 +1,8 @@
-FROM ros:kilted
+ARG ROS_DISTRO=jazzy
 
+FROM ros:${ROS_DISTRO}
+
+ARG ROS_DISTRO
 ARG USERNAME=rosuser
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
@@ -26,9 +29,13 @@ RUN apt-get update && apt-get upgrade -y \
         python3-pip \
         pipx \
         python3-serial \
+        ros-${ROS_DISTRO}-rviz2 \
+        ros-${ROS_DISTRO}-rqt \
+        x11-apps \
+        psmisc \
     && rm -rf /var/lib/apt/lists/*
 
-ENV SETUP_BASH=/opt/ros/kilted/setup.bash
+ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash
 RUN echo "source $SETUP_BASH" >> /home/$USERNAME/.bashrc
 RUN echo "export PATH=\$PATH:/home/$USERNAME/.local/bin" >> /home/$USERNAME/.bashrc
 RUN echo "if [ -f /home/$USERNAME/ws/install/setup.bash ]; then source /home/$USERNAME/ws/install/setup.bash; fi" >> /home/$USERNAME/.bashrc

@@ -3,10 +3,10 @@
 ROS2 node that bridges a custom serial protocol to ROS2 topics.
 
 Serial protocol format (newline-terminated):
-  <topic_name> <message_type> <json>\n
+  pub <topic_name> <message_type> <json>\n
 
 Example:
-  imu sensor_msgs/msg/Imu {"header": {...}, "orientation": {...}, ...}
+  pub imu sensor_msgs/msg/Imu {"header": {...}, "orientation": {...}, ...}
 
 Usage:
   python3 serial_bridge_node.py
@@ -60,23 +60,26 @@ class SerialBridgeNode(Node):
         super().__init__("serial_bridge")
 
         # Parameters
-        self.declare_parameter("port", "/dev/ttyACM1")
-        self.declare_parameter("baudrate", 115200)
-        self.declare_parameter(
-            "subscriptions",
-            [
-                "cmd_vel geometry_msgs/msg/Twist",
-                "base_battery_enable_for_sec std_msgs/msg/UInt32",
-                "imu/calibrate_accel_gyro std_msgs/msg/Empty",
-            ],
-        )
+        self.declare_parameter("port", "/dev/ttyACM0")
+        self.declare_parameter("baudrate", 1000000)
 
         port = self.get_parameter("port").value
         baudrate = self.get_parameter("baudrate").value
-        sub_specs = self.get_parameter("subscriptions").value
 
         self.get_logger().info(f"Opening serial port {port} at {baudrate} baud")
         self.ser = serial.Serial(port, baudrate, timeout=0.1)
+
+        # Send two newlines to synchronize the serial connection
+        self.ser.write(b"\n\n")
+
+        # Send current ROS timestamp to the device upon connection
+        now = self.get_clock().now().to_msg()
+        ts_line = f"timestamp {now.sec} {now.nanosec}\n"
+        self.ser.write(ts_line.encode("utf-8"))
+        self.get_logger().info(f"Sent timestamp: {now.sec} {now.nanosec}")
+
+        # Request subscription list from Arduino
+        self.ser.write(b"list_subs\n")
 
         # Dynamic publishers: topic_name -> (publisher, msg_class)
         self._serial_publishers: dict[str, tuple] = {}
@@ -84,31 +87,8 @@ class SerialBridgeNode(Node):
         # Lock for serial writes from multiple subscription callbacks
         self._serial_lock = threading.Lock()
 
-        # Create ROS2 subscriptions that forward messages to the Arduino
+        # ROS2 subscriptions (populated dynamically from Arduino response)
         self._ros_subs = []
-        for spec in sub_specs or []:
-            parts = spec.split()
-            if len(parts) != 2:
-                self.get_logger().warn(f"Invalid subscription spec: '{spec}'")
-                continue
-            topic_name, type_str = parts
-            msg_class = resolve_msg_class(type_str)
-            if msg_class is None:
-                self.get_logger().warn(f"Could not resolve message type: {type_str}")
-                continue
-
-            def _make_cb(tn, ts):
-                def _cb(msg):
-                    self._send_to_serial(tn, ts, msg)
-                return _cb
-
-            sub = self.create_subscription(
-                msg_class, topic_name, _make_cb(topic_name, type_str), 10
-            )
-            self._ros_subs.append(sub)
-            self.get_logger().info(
-                f"Subscribed to ROS2 topic: {topic_name} [{type_str}]"
-            )
 
         # Start background serial reader
         self._running = True
@@ -120,7 +100,7 @@ class SerialBridgeNode(Node):
     # ------------------------------------------------------------------
 
     def _send_to_serial(self, topic_name: str, type_str: str, msg):
-        line = f"{topic_name} {type_str} {msg_to_json(msg)}\n"
+        line = f"pub {topic_name} {type_str} {msg_to_json(msg)}\n"
         with self._serial_lock:
             try:
                 self.ser.write(line.encode("utf-8"))
@@ -146,8 +126,51 @@ class SerialBridgeNode(Node):
         self.get_logger().info(f"Created publisher: {topic_name} [{type_str}]")
         return entry
 
+    def _create_subscription(self, topic_name: str, type_str: str):
+        msg_class = resolve_msg_class(type_str)
+        if msg_class is None:
+            self.get_logger().warn(f"Could not resolve message type: {type_str}")
+            return
+
+        def _make_cb(tn, ts):
+            def _cb(msg):
+                self._send_to_serial(tn, ts, msg)
+            return _cb
+
+        sub = self.create_subscription(
+            msg_class, topic_name, _make_cb(topic_name, type_str), 10
+        )
+        self._ros_subs.append(sub)
+        self.get_logger().info(
+            f"Subscribed to ROS2 topic: {topic_name} [{type_str}]"
+        )
+
+    def _handle_subscriptions_response(self, json_str: str):
+        try:
+            entries = json.loads(json_str)
+        except json.JSONDecodeError as exc:
+            self.get_logger().error(f"Failed to parse subscriptions: {exc}")
+            return
+        if not isinstance(entries, list):
+            self.get_logger().error("subscriptions response is not a list")
+            return
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            for topic_name, type_str in entry.items():
+                self._create_subscription(topic_name, type_str)
+
     def _process_line(self, line: str):
-        # Format: "<topic> <type> <json>"
+        # Format: "subscriptions <json>"
+        if line.startswith("subscriptions "):
+            self._handle_subscriptions_response(line[len("subscriptions "):])
+            return
+
+        # Format: "pub <topic> <type> <json>"
+        if not line.startswith("pub "):
+            return
+        line = line[4:]  # strip "pub " prefix
+
         first_space = line.find(" ")
         if first_space < 0:
             return
