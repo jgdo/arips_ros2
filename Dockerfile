@@ -66,6 +66,10 @@ FROM base AS robot
 
 ARG USERNAME=rosuser
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ros-${ROS_DISTRO}-teleop-twist-joy \
+    && rm -rf /var/lib/apt/lists/*
+
 USER $USERNAME
 
 # build ydlidar-sdk
