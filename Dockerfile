@@ -29,6 +29,8 @@ RUN apt-get update && apt-get upgrade -y \
         python3-pip \
         pipx \
         python3-serial \
+        git \
+        ssh \
         psmisc \
     && rm -rf /var/lib/apt/lists/*
 
