@@ -3,9 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: dev
+      target: robot
     volumes:
-      - .:/home/rosuser/colcon_ws/src/arips_ros2
+      - ../../:/home/rosuser/colcon_ws
       - /dev:/dev
     group_add:
       - dialout

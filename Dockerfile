@@ -1,6 +1,6 @@
 ARG ROS_DISTRO=jazzy
 
-FROM ros:${ROS_DISTRO}
+FROM ros:${ROS_DISTRO} AS base
 
 ARG ROS_DISTRO
 ARG USERNAME=rosuser
@@ -29,19 +29,47 @@ RUN apt-get update && apt-get upgrade -y \
         python3-pip \
         pipx \
         python3-serial \
-        ros-${ROS_DISTRO}-rviz2 \
-        ros-${ROS_DISTRO}-rqt \
-        x11-apps \
         psmisc \
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash
 RUN echo "source $SETUP_BASH" >> /home/$USERNAME/.bashrc
 RUN echo "export PATH=\$PATH:/home/$USERNAME/.local/bin" >> /home/$USERNAME/.bashrc
-RUN echo "if [ -f /home/$USERNAME/ws/install/setup.bash ]; then source /home/$USERNAME/ws/install/setup.bash; fi" >> /home/$USERNAME/.bashrc
+RUN echo "if [ -f /home/$USERNAME/colcon_ws/install/setup.bash ]; then source /home/$USERNAME/colcon_ws/install/setup.bash; fi" >> /home/$USERNAME/.bashrc
 
 ENV PYTHONPYCACHEPREFIX=/home/$USERNAME/.pycache
 
+
+# ── dev stage ──────────────────────────────────────────────
+FROM base AS dev
+
+ARG ROS_DISTRO
+ARG USERNAME=rosuser
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ros-${ROS_DISTRO}-rviz2 \
+        ros-${ROS_DISTRO}-rqt \
+        ros-${ROS_DISTRO}-rqt-common-plugins \
+        ros-${ROS_DISTRO}-rqt-robot-steering \
+        x11-apps \
+    && rm -rf /var/lib/apt/lists/*
+
 USER $USERNAME
-COPY --chown=$USERNAME:$USERNAME colcon_defaults.yaml /home/$USERNAME/ws/colcon_defaults.yaml
-WORKDIR /home/$USERNAME/ws
+# setup ROS2 workspace
+RUN mkdir -p /home/$USERNAME/colcon_ws/src
+COPY --chown=$USERNAME:$USERNAME colcon_defaults.yaml /home/$USERNAME/colcon_ws/colcon_defaults.yaml
+
+WORKDIR /home/$USERNAME/colcon_ws
+
+# ── robot stage ────────────────────────────────────────────
+FROM base AS robot
+
+ARG USERNAME=rosuser
+
+USER $USERNAME
+
+# build ydlidar-sdk
+RUN git clone https://github.com/YDLIDAR/YDLidar-SDK.git /home/$USERNAME/YDLidar-SDK
+RUN cd /home/$USERNAME/YDLidar-SDK && mkdir build && cd build && cmake .. && make -j && sudo make install
+
+WORKDIR /home/$USERNAME/colcon_ws

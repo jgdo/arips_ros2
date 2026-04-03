@@ -2,7 +2,7 @@
     "name": "arips_ros2",
     "dockerComposeFile": "../docker-compose.yml",
     "service": "ros2",
-    "workspaceFolder": "/home/rosuser/ws/src/arips_ros2",
+    "workspaceFolder": "/home/rosuser/colcon_ws/src/arips_ros2",
     "remoteUser": "rosuser",
     "customizations": {
         "vscode": {
