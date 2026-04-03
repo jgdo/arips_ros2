@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: robot
+      args:
+        - USER_ID=${UID}
     volumes:
       - ../../:/home/rosuser/colcon_ws
       - /dev:/dev

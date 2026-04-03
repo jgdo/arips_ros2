@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: dev
+      args:
+        - USER_ID=${UID}
     volumes:
       - .:/home/rosuser/colcon_ws/src/arips_ros2
       - /dev:/dev
