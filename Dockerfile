@@ -57,7 +57,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 USER $USERNAME
 # setup ROS2 workspace
 RUN mkdir -p /home/$USERNAME/colcon_ws/src
-COPY --chown=$USERNAME:$USERNAME colcon_defaults.yaml /home/$USERNAME/colcon_ws/colcon_defaults.yaml
+COPY --chown=$USERNAME:$USERNAME .colcon_defaults.yaml /home/$USERNAME/colcon_ws/colcon_defaults.yaml
 
 WORKDIR /home/$USERNAME/colcon_ws
 
