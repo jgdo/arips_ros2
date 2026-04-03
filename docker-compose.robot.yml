@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       target: robot
       args:
-        - USER_ID=${UID}
+        USER_UID: 1001
     volumes:
       - ../../:/home/rosuser/colcon_ws
       - /dev:/dev
