@@ -1,0 +1,9 @@
+components:
+  hello:
+    package: arips_launch
+    file: launch/hello_pub.launch.py
+    dependencies: []  # no dependencies
+  world:
+    package: arips_launch
+    file: launch/world_pub.launch.py
+    dependencies: [hello]
