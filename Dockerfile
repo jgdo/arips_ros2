@@ -32,6 +32,7 @@ RUN apt-get update && apt-get upgrade -y \
         git \
         ssh \
         psmisc \
+        ros-${ROS_DISTRO}-rosbridge-suite \
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash

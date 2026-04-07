@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIPS Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/eventemitter2@6.4.9/lib/eventemitter2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.2/dist/nipplejs.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+#top { display: flex; flex: 1; overflow: hidden; }
+#sidebar {
+  width: 260px; min-width: 200px; border-right: 1px solid #ccc;
+  padding: 10px; overflow-y: auto;
+}
+#sidebar h2 { margin-bottom: 8px; font-size: 16px; }
+#components-list { list-style: none; }
+#components-list li { padding: 4px 0; }
+#components-list label { cursor: pointer; }
+#main { flex: 1; display: flex; align-items: center; justify-content: center; color: #888; }
+#bottom {
+  height: 180px; border-top: 1px solid #ccc;
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+#joystick-zone { width: 160px; height: 160px; }
+#status { position: absolute; top: 4px; right: 10px; font-size: 12px; }
+#connection-status { position: absolute; top: 10px; right: 10px; font-size: 12px; }
+.connected { color: green; }
+.disconnected { color: red; }
+</style>
+</head>
+<body>
+
+<div id="connection-status" class="disconnected">Disconnected</div>
+
+<div id="top">
+  <div id="sidebar">
+    <h2>Components</h2>
+    <ul id="components-list"><li>Loading...</li></ul>
+  </div>
+  <div id="main"></div>
+</div>
+
+<div id="bottom">
+  <div id="joystick-zone"></div>
+  <div id="status">vel: 0.00 / 0.00</div>
+</div>
+
+<script>
+(function() {
+  // ── ROS connection ───────────────────────────────────────────
+  var wsUrl = 'ws://' + window.location.hostname + ':9090';
+  var ros = new ROSLIB.Ros({ url: wsUrl });
+
+  var connEl = document.getElementById('connection-status');
+  ros.on('connection', function() {
+    connEl.textContent = 'Connected';
+    connEl.className = 'connected';
+    fetchComponents();
+  });
+  ros.on('error', function() {
+    connEl.textContent = 'Error';
+    connEl.className = 'disconnected';
+  });
+  ros.on('close', function() {
+    connEl.textContent = 'Disconnected';
+    connEl.className = 'disconnected';
+  });
+
+  // ── Component list ───────────────────────────────────────────
+  var listEl = document.getElementById('components-list');
+  var componentStates = {}; // name -> {running, checkbox}
+  var pendingActions = {};  // name -> true while a service call is in-flight
+
+  var listClient = new ROSLIB.Service({
+    ros: ros,
+    name: '/component_manager/list_components',
+    serviceType: 'component_manager_msgs/srv/ListComponents'
+  });
+
+  var startClient = new ROSLIB.Service({
+    ros: ros,
+    name: '/component_manager/start_component',
+    serviceType: 'component_manager_msgs/srv/StartComponent'
+  });
+
+  var stopClient = new ROSLIB.Service({
+    ros: ros,
+    name: '/component_manager/stop_component',
+    serviceType: 'component_manager_msgs/srv/StopComponent'
+  });
+
+  var stateSub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/component_manager/components_state',
+    messageType: 'component_manager_msgs/msg/ComponentsState'
+  });
+
+  stateSub.subscribe(function(msg) {
+    updateComponentUI(msg.names, msg.running);
+  });
+
+  function fetchComponents() {
+    listClient.callService(new ROSLIB.ServiceRequest({}), function(result) {
+      var state = result.state;
+      buildComponentList(state.names, state.running);
+    }, function(err) {
+      listEl.innerHTML = '<li>Error loading components</li>';
+      console.error('ListComponents failed:', err);
+    });
+  }
+
+  function buildComponentList(names, running) {
+    listEl.innerHTML = '';
+    componentStates = {};
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      var isRunning = running[i];
+
+      var li = document.createElement('li');
+      var label = document.createElement('label');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = isRunning;
+      cb.dataset.component = name;
+      cb.addEventListener('change', onCheckboxChange);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(' ' + name));
+      li.appendChild(label);
+      listEl.appendChild(li);
+
+      componentStates[name] = { running: isRunning, checkbox: cb };
+    }
+  }
+
+  function updateComponentUI(names, running) {
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      var isRunning = running[i];
+      if (componentStates[name]) {
+        componentStates[name].running = isRunning;
+        if (!pendingActions[name]) {
+          componentStates[name].checkbox.checked = isRunning;
+        }
+      } else {
+        // New component appeared — rebuild
+        buildComponentList(names, running);
+        return;
+      }
+    }
+  }
+
+  function onCheckboxChange(e) {
+    var name = e.target.dataset.component;
+    var shouldRun = e.target.checked;
+
+    pendingActions[name] = true;
+
+    var client = shouldRun ? startClient : stopClient;
+    var req = new ROSLIB.ServiceRequest({ name: name });
+
+    client.callService(req, function(result) {
+      delete pendingActions[name];
+      if (!result.success) {
+        // Revert checkbox on failure
+        e.target.checked = !shouldRun;
+        console.warn('Service call failed:', result.message);
+      }
+    }, function(err) {
+      delete pendingActions[name];
+      e.target.checked = !shouldRun;
+      console.error('Service call error:', err);
+    });
+  }
+
+  // ── Joystick / cmd_vel ───────────────────────────────────────
+  var cmdVelPub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/cmd_vel',
+    messageType: 'geometry_msgs/msg/Twist'
+  });
+
+  var statusEl = document.getElementById('status');
+  var linearX = 0;
+  var angularZ = 0;
+  var maxLinear = 0.5;  // m/s
+  var maxAngular = 1.0; // rad/s
+  var publishTimer = null;
+
+  function publishTwist() {
+    var twist = new ROSLIB.Message({
+      linear: { x: linearX, y: 0, z: 0 },
+      angular: { x: 0, y: 0, z: angularZ }
+    });
+    cmdVelPub.publish(twist);
+  }
+
+  var joystick = nipplejs.create({
+    zone: document.getElementById('joystick-zone'),
+    mode: 'static',
+    position: { left: '50%', top: '50%' },
+    color: '#444',
+    size: 120
+  });
+
+  joystick.on('start', function() {
+    if (!publishTimer) {
+      publishTimer = setInterval(publishTwist, 100);
+    }
+  });
+
+  joystick.on('move', function(evt, data) {
+    // data.vector.y = forward, data.vector.x = left-right
+    var distance = Math.min(data.distance, 60) / 60; // normalize 0..1
+    linearX = data.vector.y * distance * maxLinear;
+    angularZ = -data.vector.x * distance * maxAngular;
+    statusEl.textContent = 'vel: ' + linearX.toFixed(2) + ' / ' + angularZ.toFixed(2);
+  });
+
+  joystick.on('end', function() {
+    if (publishTimer) {
+      clearInterval(publishTimer);
+      publishTimer = null;
+    }
+    linearX = 0;
+    angularZ = 0;
+    publishTwist();
+    statusEl.textContent = 'vel: 0.00 / 0.00';
+  });
+
+})();
+</script>
+</body>
+</html>

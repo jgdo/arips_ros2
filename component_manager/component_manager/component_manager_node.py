@@ -11,6 +11,7 @@ import yaml
 
 from ament_index_python.packages import get_package_share_directory
 
+from component_manager_msgs.msg import ComponentsState
 from component_manager_msgs.srv import (
     ListComponents,
     StartComponent,
@@ -55,6 +56,9 @@ class ComponentManagerNode(Node):
             StopComponent, '~/stop_component', self._handle_stop)
         self._list_srv = self.create_service(
             ListComponents, '~/list_components', self._handle_list)
+
+        self._state_pub = self.create_publisher(
+            ComponentsState, '~/components_state', 10)
 
         self.get_logger().info(
             f'Component manager ready with {len(self._components)} components')
@@ -208,6 +212,24 @@ class ComponentManagerNode(Node):
         state.running = False
         state.started_by.clear()
 
+    # ── State publishing ────────────────────────────────────────────
+
+    def _build_state_msg(self) -> ComponentsState:
+        """Build a ComponentsState message from the current state. Must be
+        called while holding ``self._lock``."""
+        msg = ComponentsState()
+        for name in sorted(self._components):
+            state = self._components[name]
+            msg.names.append(name)
+            msg.running.append(state.running)
+            msg.started_by.append(json.dumps(sorted(state.started_by)))
+        return msg
+
+    def _publish_state(self) -> None:
+        """Publish current components state. Must be called while holding
+        ``self._lock``."""
+        self._state_pub.publish(self._build_state_msg())
+
     # ── Service handlers ────────────────────────────────────────────
 
     def _handle_start(
@@ -255,6 +277,7 @@ class ComponentManagerNode(Node):
                 parts.append(f'(launched: {", ".join(started)})')
             response.success = True
             response.message = ' '.join(parts)
+            self._publish_state()
             return response
 
     def _handle_stop(
@@ -305,6 +328,7 @@ class ComponentManagerNode(Node):
                 response.message = f'Stopped: {", ".join(stopped)}'
             else:
                 response.message = f'Component "{name}" stop requested'
+            self._publish_state()
             return response
 
     def _cascade_stop(self, name: str, stopped: list[str]) -> None:
@@ -324,11 +348,7 @@ class ComponentManagerNode(Node):
         response: ListComponents.Response,
     ) -> ListComponents.Response:
         with self._lock:
-            for name in sorted(self._components):
-                state = self._components[name]
-                response.names.append(name)
-                response.running.append(state.running)
-                response.started_by.append(json.dumps(sorted(state.started_by)))
+            response.state = self._build_state_msg()
         return response
 
 
