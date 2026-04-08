@@ -33,6 +33,7 @@ RUN apt-get update && apt-get upgrade -y \
         ssh \
         psmisc \
         ros-${ROS_DISTRO}-rosbridge-suite \
+        ros-${ROS_DISTRO}-moveit \
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash
@@ -54,6 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-${ROS_DISTRO}-rqt \
         ros-${ROS_DISTRO}-rqt-common-plugins \
         ros-${ROS_DISTRO}-rqt-robot-steering \
+        ros-${ROS_DISTRO}-joint-state-publisher-gui \
         x11-apps \
     && rm -rf /var/lib/apt/lists/*
 

@@ -9,8 +9,14 @@ services:
     volumes:
       - .:/home/rosuser/colcon_ws/src/arips_ros2
       - /dev:/dev
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/home/rosuser/.Xauthority
     group_add:
       - dialout
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      DISPLAY: $DISPLAY
     privileged: true
     network_mode: host
     ipc: host
