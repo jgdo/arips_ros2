@@ -22,7 +22,7 @@ Visualization Manager:
       Enabled: true
       Value: true
   Global Options:
-    Fixed Frame: base_link
+    Fixed Frame: base_footprint
   Tools:
     - Class: rviz_default_plugins/MoveCamera
   Views:
