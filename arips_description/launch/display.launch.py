@@ -12,7 +12,6 @@ import os
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('arips_description')
-    # urdf_file = os.path.join(pkg_share, 'urdf', 'arips.urdf.xacro')
     urdf_file = os.path.join(pkg_share, 'urdf', 'arips_onshape.urdf')
     rviz_config = os.path.join(pkg_share, 'rviz', 'display.rviz')
 
@@ -55,5 +54,6 @@ def generate_launch_description():
             name='rviz2',
             arguments=['-d', rviz_config],
             output='screen',
+            condition=IfCondition(use_gui),
         ),
     ])
