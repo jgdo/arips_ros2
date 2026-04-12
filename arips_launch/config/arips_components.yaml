@@ -1,9 +1,9 @@
 components:
-  hello:
+  base_power:
     package: arips_launch
-    file: launch/hello_pub.launch.py
+    file: launch/base_power.launch.py
     dependencies: []  # no dependencies
-  world:
+  xbox_teleop:
     package: arips_launch
-    file: launch/world_pub.launch.py
-    dependencies: [hello]
+    file: launch/teleop_xbox.launch.py
+    dependencies: [base_power]

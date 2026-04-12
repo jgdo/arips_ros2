@@ -50,5 +50,10 @@ def generate_launch_description():
             arguments=['--x', '0.1', '--y', '0', '--z', '0',
                         '--roll', '0', '--pitch', '0', '--yaw', '0',
                         '--frame-id', 'base_footprint', '--child-frame-id', 'arips_wheel_center'],
+        ),
+
+        Node(package='arips_serial_bridge',
+             executable='serial_node',
+             name='serial_node',
         )
     ])

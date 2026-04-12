@@ -34,6 +34,7 @@ RUN apt-get update && apt-get upgrade -y \
         psmisc \
         ros-${ROS_DISTRO}-rosbridge-suite \
         ros-${ROS_DISTRO}-moveit \
+        ros-${ROS_DISTRO}-joint-state-publisher \
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash

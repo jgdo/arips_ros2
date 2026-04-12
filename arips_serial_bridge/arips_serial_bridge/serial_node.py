@@ -60,7 +60,7 @@ class SerialBridgeNode(Node):
         super().__init__("serial_bridge")
 
         # Parameters
-        self.declare_parameter("port", "/dev/ttyACM0")
+        self.declare_parameter("port", "/dev/arduino_base")
         self.declare_parameter("baudrate", 1000000)
 
         port = self.get_parameter("port").value
