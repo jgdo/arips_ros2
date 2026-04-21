@@ -1,0 +1,14 @@
+[Unit]
+Description=Start ARIPS ROS components
+After=docker-compose-robot.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/jgdo/colcon_ws/src/arips_ros2
+ExecStart=docker exec arips_ros2-ros2-1 bash -ic 'ros2 launch arips_launch startup.launch.py'
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

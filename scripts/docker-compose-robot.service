@@ -1,0 +1,14 @@
+[Unit]
+Description=ARIPS Robot Docker Compose Service
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/jgdo/colcon_ws/src/arips_ros2
+ExecStart=docker compose -f docker-compose.robot.yml up --no-recreate
+Restart=no
+RestartSec=5
+
+[Install]
+WantedBy=default.target
