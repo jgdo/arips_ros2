@@ -7,3 +7,7 @@ components:
     package: arips_launch
     file: launch/teleop_xbox.launch.py
     dependencies: [base_power]
+  lidar:
+    package: arips_launch
+    file: launch/lidar.launch.py
+    dependencies: [base_power] 

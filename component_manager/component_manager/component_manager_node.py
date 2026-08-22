@@ -35,7 +35,6 @@ class ComponentState:
 
 
 class ComponentManagerNode(Node):
-
     def __init__(self):
         super().__init__('component_manager')
         self.declare_parameter('config_file', '')
