@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=humble
+ARG ROS_DISTRO=jazzy
 
 FROM ros:${ROS_DISTRO} AS base
 
@@ -35,6 +35,7 @@ RUN apt-get update && apt-get upgrade -y \
         ros-${ROS_DISTRO}-rosbridge-suite \
         ros-${ROS_DISTRO}-moveit \
         ros-${ROS_DISTRO}-joint-state-publisher \
+        ros-${ROS_DISTRO}-joint-state-publisher-gui \
         ros-${ROS_DISTRO}-navigation2 \
         ros-${ROS_DISTRO}-nav2-bringup \
     && rm -rf /var/lib/apt/lists/*
