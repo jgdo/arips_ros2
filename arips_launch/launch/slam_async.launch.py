@@ -88,14 +88,14 @@ def generate_launch_description():
     
 
     rosbag_play = ExecuteProcess(
-        cmd=['ros2', 'bag', 'play', '/home/jgdo/colcon_ws/src/arips_ros2/rosbag2_2026_04_27-13_45_15/', '--clock', 
-        '--exclude-topics', '/odom', '/tf', '/tf_static'
+        cmd=['ros2', 'bag', 'play', '--rate', '4', '/home/jgdo/rosbag2_2026_09_09-09_45_10/', '--clock', 
+        # '--exclude-topics', '/odom', '/tf', '/tf_static'
         ],
         output='screen',
     )
 
     return LaunchDescription([
-        # rosbag_play,
+        rosbag_play,
         declare_autostart_cmd,
         declare_use_lifecycle_manager,
         declare_use_sim_time_argument,
@@ -105,25 +105,14 @@ def generate_launch_description():
         activate_event,
 
         # Node(
-        #     package='ros2_laser_scan_matcher',
-        #     executable='laser_scan_matcher',
-        #     output='screen',
-        #     parameters=[{
-        #         'publish_odom': '/csm_odom',
-        #         'publish_tf': True,
-        #         'laser_frame': 'laser_frame'
-        #     }],
-        # ),
-
-        # Node(
         #     package='tf2_ros',
         #     executable='static_transform_publisher',
         #     name='static_tf_base_to_laser',
         #     arguments=[
-        #         '0', '0', '0',   # translation (x y z)
-        #         '0', '0', '180',   # rotation (roll pitch yaw)
+        #         '0.0', '0', '0',   # translation (x y z)
+        #         '3.1415926', '0', '0',   # rotation rad (yaw roll pitch)
         #         'base_link',
-        #         'laser_frame'
+        #         'laser_parent'
         #     ]
         # ),
     ])

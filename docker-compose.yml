@@ -17,6 +17,11 @@ services:
       - /dev/dri:/dev/dri
     environment:
       DISPLAY: $DISPLAY
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
     privileged: true
     network_mode: host
     ipc: host

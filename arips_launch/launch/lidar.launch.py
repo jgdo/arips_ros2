@@ -53,8 +53,22 @@ def generate_launch_description():
                                '--frame-id', 'base_footprint', '--child-frame-id', 'laser_frame'],
                     )
 
+    csm_node = Node(
+                package='ros2_laser_scan_matcher',
+                executable='laser_scan_matcher',
+                output='screen',
+                parameters=[{
+                    'publish_odom': '/csm_odom',
+                    'publish_tf': True,
+                    'base_frame': 'arips_wheel_center',
+                    'odom_frame': 'odom',
+                    'laser_frame': 'laser_frame'
+                }],
+            )
+
     return LaunchDescription([
         params_declare,
         driver_node,
         tf2_node,
+        csm_node,
     ])
