@@ -18,6 +18,7 @@ from launch import LaunchDescription
 from launch_ros.actions import LifecycleNode
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
+from launch.actions import ExecuteProcess
 from launch.substitutions import LaunchConfiguration
 from launch.actions import LogInfo
 
@@ -66,8 +67,15 @@ def generate_launch_description():
                 }],
             )
 
+    enable_publish_tf = ExecuteProcess(
+           cmd=['ros2', 'topic', 'pub', '--times', '3',
+               '/enable_publish_tf', 'std_msgs/msg/Bool', 'data: false'],
+        output='screen',
+    )
+
     return LaunchDescription([
         params_declare,
+        enable_publish_tf,
         driver_node,
         tf2_node,
         csm_node,

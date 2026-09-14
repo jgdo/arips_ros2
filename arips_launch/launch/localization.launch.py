@@ -20,8 +20,6 @@ def generate_launch_description():
     use_lifecycle_manager = LaunchConfiguration("use_lifecycle_manager")
     use_sim_time = LaunchConfiguration('use_sim_time')
     slam_params_file = LaunchConfiguration('slam_params_file')
-    bag_file = LaunchConfiguration('bag_file')
-    bag_rate = LaunchConfiguration('bag_rate')
 
     declare_autostart_cmd = DeclareLaunchArgument(
         'autostart', default_value='true',
@@ -37,7 +35,7 @@ def generate_launch_description():
     declare_slam_params_file_cmd = DeclareLaunchArgument(
         'slam_params_file',
         default_value=os.path.join(get_package_share_directory("arips_launch"),
-                                    'params', 'slam_async.yaml'),
+                                    'params', 'slam_localization.yaml'),
         description='Full path to the ROS2 parameters file to use for the slam_toolbox node')
     declare_bag_file_cmd = DeclareLaunchArgument(
         'bag_file',
@@ -48,14 +46,13 @@ def generate_launch_description():
         default_value='1',
         description='Playback rate for the rosbag.')
 
-    
     # Perform substitution `$find-pkg-share`
     slam_params_file_w_subst = ParameterFile(
         slam_params_file,
         allow_substs=True,
     )
-    
-    start_async_slam_toolbox_node = LifecycleNode(
+
+    start_localization_slam_toolbox_node = LifecycleNode(
         parameters=[
             slam_params_file_w_subst,
             {
@@ -64,17 +61,15 @@ def generate_launch_description():
             }
         ],
         package='slam_toolbox',
-        executable='async_slam_toolbox_node',
+        executable='localization_slam_toolbox_node',
         name='slam_toolbox',
         output='screen',
         namespace='',
-        #prefix='gdbserver localhost:3000' 
-       # prefix="gdb -ex run --args"
     )
 
     configure_event = EmitEvent(
         event=ChangeState(
-            lifecycle_node_matcher=matches_action(start_async_slam_toolbox_node),
+            lifecycle_node_matcher=matches_action(start_localization_slam_toolbox_node),
             transition_id=Transition.TRANSITION_CONFIGURE
         ),
         condition=IfCondition(AndSubstitution(autostart, NotSubstitution(use_lifecycle_manager)))
@@ -82,27 +77,18 @@ def generate_launch_description():
 
     activate_event = RegisterEventHandler(
         OnStateTransition(
-            target_lifecycle_node=start_async_slam_toolbox_node,
+            target_lifecycle_node=start_localization_slam_toolbox_node,
             start_state="configuring",
             goal_state="inactive",
             entities=[
                 LogInfo(msg="[LifecycleLaunch] Slamtoolbox node is activating."),
                 EmitEvent(event=ChangeState(
-                    lifecycle_node_matcher=matches_action(start_async_slam_toolbox_node),
+                    lifecycle_node_matcher=matches_action(start_localization_slam_toolbox_node),
                     transition_id=Transition.TRANSITION_ACTIVATE
                 ))
             ]
         ),
         condition=IfCondition(AndSubstitution(autostart, NotSubstitution(use_lifecycle_manager)))
-    )
-    
-
-    rosbag_play = ExecuteProcess(
-        cmd=['ros2', 'bag', 'play', '--rate', bag_rate, bag_file, '--clock',
-        # '--exclude-topics', '/odom', '/tf', '/tf_static'
-        ],
-        output='screen',
-        condition=IfCondition(PythonExpression(["'", bag_file, "' != ''"])),
     )
 
     return LaunchDescription([
@@ -112,20 +98,7 @@ def generate_launch_description():
         declare_slam_params_file_cmd,
         declare_bag_file_cmd,
         declare_bag_rate_cmd,
-        rosbag_play,
-        start_async_slam_toolbox_node,
+        start_localization_slam_toolbox_node,
         configure_event,
         activate_event,
-
-        # Node(
-        #     package='tf2_ros',
-        #     executable='static_transform_publisher',
-        #     name='static_tf_base_to_laser',
-        #     arguments=[
-        #         '0.0', '0', '0',   # translation (x y z)
-        #         '3.1415926', '0', '0',   # rotation rad (yaw roll pitch)
-        #         'base_link',
-        #         'laser_parent'
-        #     ]
-        # ),
     ])
