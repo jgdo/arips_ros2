@@ -46,7 +46,7 @@ def generate_launch_description():
 
         Node(package='tf2_ros',
             executable='static_transform_publisher',
-            name='static_tf_pub_laser',
+            name='static_tf_pub_wheel_center_to_footprint',
             arguments=['--x', '-0.1', '--y', '0', '--z', '0',
                         '--roll', '0', '--pitch', '0', '--yaw', '0',
                         '--frame-id', 'arips_wheel_center', '--child-frame-id', 'base_footprint'],
@@ -54,7 +54,7 @@ def generate_launch_description():
 
         Node(package='tf2_ros',
             executable='static_transform_publisher',
-            name='static_tf_pub_laser',
+            name='static_tf_pub_footprint_to_base_link',
             arguments=['--x', '-0.1', '--y', '0', '--z', '0',
                         '--roll', '0', '--pitch', '0', '--yaw', '0',
                         '--frame-id', 'base_footprint', '--child-frame-id', 'base_link'],
