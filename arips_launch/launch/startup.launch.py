@@ -60,6 +60,14 @@ def generate_launch_description():
                         '--frame-id', 'base_footprint', '--child-frame-id', 'base_link'],
         ),
 
+        Node(package='tf2_ros',
+            executable='static_transform_publisher',
+            name='static_tf_pub_kinect_mount_to_kinect_link',
+            arguments=['--x', '0', '--y', '0', '--z', '0.03',
+                        '--roll', '0', '--pitch', '0', '--yaw', '-1.57079632679',
+                        '--frame-id', 'kinect_mount', '--child-frame-id', 'kinect_link'],
+        ),
+
         Node(package='arips_serial_bridge',
              executable='serial_node',
              name='serial_node',

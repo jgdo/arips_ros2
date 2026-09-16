@@ -4,11 +4,11 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Local costmap1/Status1
+        - /Global Options1
         - /Plan global1/Offset1
-        - /Path1/Status1
         - /Path1/Offset1
         - /Trajectories1/Topic1
+        - /DepthCloud1/Auto Size1
       Splitter Ratio: 0.4891122281551361
     Tree Height: 389
   - Class: rviz_common/Selection
@@ -28,7 +28,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: DepthCloud
 Visualization Manager:
   Class: ""
   Displays:
@@ -36,7 +36,7 @@ Visualization Manager:
       Cell Size: 0.10000000149011612
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.029999999329447746
         Value: Lines
@@ -49,7 +49,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 100
       Reference Frame: <Fixed Frame>
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/TF
       Enabled: false
       Filter (blacklist): ""
@@ -316,8 +316,7 @@ Visualization Manager:
       Enabled: true
       Name: Trajectories
       Namespaces:
-        Candidate Trajectories: true
-        Optimal Trajectory: true
+        {}
       Topic:
         Depth: 1
         Durability Policy: Volatile
@@ -353,10 +352,50 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /optimal_trajectory
       Value: true
+    - Alpha: 1
+      Auto Size:
+        Auto Size Factor: 1
+        Value: true
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      CameraInfo Topic: /depth/camera_info
+      Channel Name: intensity
+      Class: rviz_default_plugins/DepthCloud
+      Color: 255; 255; 255
+      Color Image Topic: /image_raw
+      Color Transformer: RGB8
+      Color Transport Hint: compressed
+      Decay Time: 0
+      Depth Map Topic: /depth/image_raw
+      Depth Map Transport Hint: compressedDepth
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: DepthCloud
+      Occlusion Compensation:
+        Occlusion Time-Out: 30
+        Value: false
+      Position Transformer: XYZ
+      Queue Size: 5
+      Reliability Policy: Best effort
+      Selectable: true
+      Size (Pixels): 3
+      Style: Flat Squares
+      Topic Filter: true
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: odom
+    Fixed Frame: kinect_depth
     Frame Rate: 30
   Name: root
   Tools:
@@ -398,21 +437,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -0.019998352974653244
-      Class: rviz_default_plugins/TopDownOrtho
+      Class: rviz_default_plugins/XYOrbit
+      Distance: 0.58185213804245
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: 0.29877400398254395
+        Y: 0.11760188639163971
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 257.244384765625
+      Pitch: -1.4797964096069336
       Target Frame: <Fixed Frame>
-      Value: TopDownOrtho (rviz_default_plugins)
-      X: 0.29877400398254395
-      Y: 0.11760188639163971
+      Value: XYOrbit (rviz_default_plugins)
+      Yaw: 4.7592387199401855
     Saved: ~
 Window Geometry:
   Displays:
@@ -420,7 +464,7 @@ Window Geometry:
   Height: 1852
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd000000030000000000000156000006a2fc0200000007fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f00000619fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b2000000000000000000000003000004b00000020efc0100000003fb000000100044006900730070006c0061007900730100000000000002570000015600fffffffc0000025d000002530000025300fffffffa000000000200000003fb0000000a005600690065007700730100000000ffffffff000000a000fffffffb0000000a005600690065007700730100000000ffffffff0000000000000000fb0000000800540069006d0065010000065a000000c70000003700fffffffb0000000800540069006d00650100000000000004500000000000000000000004b0000004d200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000030000000000000156000004d2fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065010000003b000004d20000000000000000fb0000000c00430061006d006500720061010000003b000004d20000000000000000000000010000010f00000619fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b2000000000000000000000003000004b00000020efc0100000003fb000000100044006900730070006c0061007900730100000000000002570000015600fffffffc0000025d000002530000025300fffffffa000000000200000003fb0000000a005600690065007700730100000000ffffffff000000a000fffffffb0000000a005600690065007700730100000000ffffffff0000000000000000fb0000000800540069006d0065010000065a000000c70000003700fffffffb0000000800540069006d00650100000000000004500000000000000000000004b0000004d200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
