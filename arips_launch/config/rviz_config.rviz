@@ -5,9 +5,14 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /TF1
+        - /TF1/Frames1
+        - /RobotModel1
         - /Plan global1/Offset1
         - /Path1/Offset1
         - /Trajectories1/Topic1
+        - /DepthCloud1
+        - /DepthCloud1/Status1
         - /DepthCloud1/Auto Size1
       Splitter Ratio: 0.4891122281551361
     Tree Height: 389
@@ -36,7 +41,7 @@ Visualization Manager:
       Cell Size: 0.10000000149011612
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
-      Enabled: false
+      Enabled: true
       Line Style:
         Line Width: 0.029999999329447746
         Value: Lines
@@ -49,23 +54,94 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 100
       Reference Frame: <Fixed Frame>
-      Value: false
+      Value: true
     - Class: rviz_default_plugins/TF
-      Enabled: false
+      Enabled: true
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
+        arips_wheel_center:
+          Value: false
+        base_footprint:
+          Value: false
+        base_link:
+          Value: false
+        base_lower:
+          Value: false
+        base_upper:
+          Value: false
+        gripper:
+          Value: false
+        kinect_beam:
+          Value: false
+        kinect_depth_frame:
+          Value: false
+        kinect_depth_optical_frame:
+          Value: true
+        kinect_link:
+          Value: false
+        kinect_mount:
+          Value: false
+        kinect_rgb_frame:
+          Value: false
+        kinect_rgb_optical_frame:
+          Value: true
+        laptop:
+          Value: false
+        link_0:
+          Value: false
+        link_1:
+          Value: false
+        link_2:
+          Value: false
+        link_3:
+          Value: false
+        odom:
+          Value: false
+        wheel_left:
+          Value: false
+        wheel_right:
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        {}
+        arips_wheel_center:
+          base_footprint:
+            base_link:
+              {}
+            base_lower:
+              base_upper:
+                kinect_mount:
+                  kinect_beam:
+                    {}
+                  kinect_link:
+                    kinect_depth_frame:
+                      kinect_depth_optical_frame:
+                        {}
+                    kinect_rgb_frame:
+                      kinect_rgb_optical_frame:
+                        {}
+                laptop:
+                  {}
+                link_0:
+                  link_1:
+                    link_2:
+                      link_3:
+                        gripper:
+                          {}
+              wheel_left:
+                {}
+              wheel_right:
+                {}
+        odom:
+          {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -111,20 +187,84 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /robot_description
-      Enabled: false
+      Enabled: true
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        base_lower:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_upper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        kinect_beam:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        kinect_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        laptop:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        link_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_left:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel_right:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
-      Value: false
+      Value: true
       Visual Enabled: true
     - Alpha: 0.699999988079071
       Binary representation: false
@@ -366,11 +506,11 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz_default_plugins/DepthCloud
       Color: 255; 255; 255
-      Color Image Topic: /image_raw
+      Color Image Topic: /kinect/rgb/image_raw
       Color Transformer: RGB8
       Color Transport Hint: compressed
       Decay Time: 0
-      Depth Map Topic: /depth/image_raw
+      Depth Map Topic: /kinect/depth/image_raw
       Depth Map Transport Hint: compressedDepth
       Enabled: true
       Invert Rainbow: false
@@ -395,7 +535,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: kinect_depth
+    Fixed Frame: arips_wheel_center
     Frame Rate: 30
   Name: root
   Tools:
@@ -438,25 +578,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/XYOrbit
-      Distance: 0.58185213804245
+      Distance: 5.795141696929932
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.29877400398254395
-        Y: 0.11760188639163971
-        Z: 0
+        X: -0.07177257537841797
+        Y: 0.1884908676147461
+        Z: 1.0728836059570312e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -1.4797964096069336
+      Pitch: 0.7302029728889465
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz_default_plugins)
-      Yaw: 4.7592387199401855
+      Yaw: 4.5442423820495605
     Saved: ~
 Window Geometry:
   Displays:
