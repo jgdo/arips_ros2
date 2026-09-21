@@ -13,48 +13,23 @@ import os
 def generate_launch_description():
     pkg_share = get_package_share_directory('arips_description')
     urdf_file = os.path.join(pkg_share, 'urdf', 'arips_onshape.urdf.xacro')
-    rviz_config = os.path.join(pkg_share, 'rviz', 'display.rviz')
-
-    use_gui = LaunchConfiguration('use_gui')
 
     return LaunchDescription([
-        DeclareLaunchArgument(
-            'use_gui',
-            default_value='true',
-            description='Use joint_state_publisher_gui',
-        ),
-
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
             name='robot_state_publisher',
             parameters=[{
                 'robot_description': ParameterValue(Command(['xacro ', urdf_file]), value_type=str),
-                'source_list': ['/feetech_joint_states'],
             }],
             output='screen',
         ),
-
-        Node(
-            package='joint_state_publisher_gui',
-            executable='joint_state_publisher_gui',
-            name='joint_state_publisher_gui',
-            condition=IfCondition(use_gui),
-        ),
-
         Node(
             package='joint_state_publisher',
             executable='joint_state_publisher',
             name='joint_state_publisher',
-            condition=UnlessCondition(use_gui),
-        ),
-
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d', rviz_config],
-            output='screen',
-            condition=IfCondition(use_gui),
+            parameters=[{
+                'source_list': ['/feetech_joint_state_broadcaster/joint_states'],
+            }],
         ),
     ])

@@ -23,10 +23,9 @@ def generate_launch_description():
             PathJoinSubstitution([
                 FindPackageShare('arips_description'),
                 'launch',
-                'display.launch.py',
+                'real.launch.py',
             ])
         ),
-        launch_arguments={'use_gui': 'false'}.items(),
     )
 
     dashboard_launch = IncludeLaunchDescription(

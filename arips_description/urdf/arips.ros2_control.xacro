@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:macro name="ros2_control_arips" params="usb_port baudrate joint_config_file arm_enabled kinect_enabled">
+        <ros2_control name="arips_servos" type="system">
+            <hardware>
+                <plugin>feetech_ros2_driver/FeetechHardwareInterface</plugin>
+                <param name="usb_port">${usb_port}</param>
+                <!-- feetech_ros2_driver v0.2.2 ignores this and hardcodes 1,000,000 baud; kept for forward-compat -->
+                <param name="baudrate">${baudrate}</param>
+                <param name="joint_config_file">${joint_config_file}</param>
+            </hardware>
+            <xacro:if value="${kinect_enabled}">
+                <joint name="kinect_joint_0">
+                    <param name="id">5</param>
+                    <command_interface name="position" />
+                    <state_interface name="position" />
+                    <state_interface name="velocity" />
+                </joint>
+            </xacro:if>
+            <xacro:if value="${arm_enabled}">
+                <joint name="revolute_2_0">
+                    <param name="id">1</param>
+                    <command_interface name="position" />
+                    <state_interface name="position" />
+                    <state_interface name="velocity" />
+                </joint>
+                <joint name="revolute_3_0">
+                    <param name="id">2</param>
+                    <command_interface name="position" />
+                    <state_interface name="position" />
+                    <state_interface name="velocity" />
+                </joint>
+                <joint name="revolute_4_0">
+                    <param name="id">3</param>
+                    <command_interface name="position" />
+                    <state_interface name="position" />
+                    <state_interface name="velocity" />
+                </joint>
+                <joint name="slider_1_0">
+                    <param name="id">6</param>
+                    <command_interface name="position" />
+                    <state_interface name="position" />
+                    <state_interface name="velocity" />
+                </joint>
+            </xacro:if>
+        </ros2_control>
+    </xacro:macro>
+
+</robot>

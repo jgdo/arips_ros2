@@ -40,6 +40,9 @@ RUN apt-get update && apt-get upgrade -y \
         ros-${ROS_DISTRO}-navigation2 \
         ros-${ROS_DISTRO}-nav2-bringup \
         ros-${ROS_DISTRO}-rqt-tf-tree \
+        ros-${ROS_DISTRO}-controller-manager \
+        ros-${ROS_DISTRO}-forward-command-controller \
+        ros-${ROS_DISTRO}-ros2controlcli \
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash
