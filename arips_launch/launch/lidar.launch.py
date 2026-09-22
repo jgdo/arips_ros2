@@ -41,7 +41,7 @@ def generate_launch_description():
                                 executable='ydlidar_ros2_driver_node',
                                 name='ydlidar_ros2_driver_node',
                                 output='screen',
-                                emulate_tty=True,
+                                # emulate_tty=True,
                                 parameters=[parameter_file],
                                 namespace='/',
                                 )

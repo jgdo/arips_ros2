@@ -9,6 +9,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/StartComponent.srv"
   "srv/StopComponent.srv"
   "srv/ListComponents.srv"
+  "srv/GetComponentLog.srv"
 )
 
 ament_package()

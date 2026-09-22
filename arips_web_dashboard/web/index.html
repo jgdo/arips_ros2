@@ -17,8 +17,39 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 }
 #sidebar h2 { margin-bottom: 8px; font-size: 16px; }
 #components-list { list-style: none; }
-#components-list li { padding: 4px 0; }
+#components-list li { padding: 4px 0; display: flex; align-items: center; justify-content: space-between; }
 #components-list label { cursor: pointer; }
+#components-list label.comp-failed { font-weight: bold; color: #c00; }
+#components-list input[type="checkbox"]:disabled { cursor: not-allowed; }
+#components-list .log-btn {
+  cursor: pointer; border: none; background: none; font-size: 14px;
+  line-height: 1; padding: 2px 4px; opacity: 0.6;
+}
+#components-list .log-btn:hover { opacity: 1; }
+#comp-popup {
+  position: absolute; display: none; max-width: 260px; z-index: 1000;
+  background: #fff; border: 1px solid #999; border-radius: 4px;
+  padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+#comp-popup .dep-line { margin-top: 2px; }
+#log-modal-overlay {
+  position: fixed; display: none; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000;
+  align-items: center; justify-content: center;
+}
+#log-modal {
+  width: 70vw; height: 70vh; background: #fff; border-radius: 6px;
+  display: flex; flex-direction: column; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+#log-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-bottom: 1px solid #ccc;
+}
+#log-modal-header h3 { font-size: 14px; }
+#log-modal-close { cursor: pointer; border: none; background: none; font-size: 18px; }
+#log-modal-body {
+  flex: 1; overflow: auto; margin: 0; padding: 10px;
+  font-family: monospace; font-size: 12px; white-space: pre-wrap;
+}
 #main { flex: 1; display: flex; align-items: center; justify-content: center; color: #888; }
 #bottom {
   height: 180px; border-top: 1px solid #ccc;
@@ -34,6 +65,16 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 <body>
 
 <div id="connection-status" class="disconnected">Disconnected</div>
+<div id="comp-popup"></div>
+<div id="log-modal-overlay">
+  <div id="log-modal">
+    <div id="log-modal-header">
+      <h3 id="log-modal-title">Log</h3>
+      <button id="log-modal-close">✕</button>
+    </div>
+    <pre id="log-modal-body"></pre>
+  </div>
+</div>
 
 <div id="top">
   <div id="sidebar">
@@ -71,8 +112,18 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 
   // ── Component list ───────────────────────────────────────────
   var listEl = document.getElementById('components-list');
-  var componentStates = {}; // name -> {running, checkbox}
+  var popupEl = document.getElementById('comp-popup');
+  var componentStates = {}; // name -> {running, state, dependencies, checkbox, label}
   var pendingActions = {};  // name -> true while a service call is in-flight
+  // ComponentsState constants (mirrored from component_manager_msgs/msg/ComponentsState)
+  var STATE_OFF = 0;
+  var STATE_RUNNING = 1;
+  var STATE_SHUTTING_DOWN = 2;
+  var STATE_FAILURE = 3;
+  var STATE_DEPENDENCY_FAILURE = 4;
+  var STATE_NAMES = ['OFF', 'RUNNING', 'SHUTTING_DOWN', 'FAILURE', 'DEPENDENCY_FAILURE'];
+  var HOVER_DELAY_MS = 1000;
+  var hoverTimer = null;
 
   var listClient = new ROSLIB.Service({
     ros: ros,
@@ -92,6 +143,12 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     serviceType: 'component_manager_msgs/srv/StopComponent'
   });
 
+  var logClient = new ROSLIB.Service({
+    ros: ros,
+    name: '/component_manager/get_component_log',
+    serviceType: 'component_manager_msgs/srv/GetComponentLog'
+  });
+
   var stateSub = new ROSLIB.Topic({
     ros: ros,
     name: '/component_manager/components_state',
@@ -99,57 +156,143 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   });
 
   stateSub.subscribe(function(msg) {
-    updateComponentUI(msg.names, msg.running);
+    updateComponentUI(msg.names, decodeStateArray(msg.state), msg.dependencies);
   });
 
   function fetchComponents() {
     listClient.callService(new ROSLIB.ServiceRequest({}), function(result) {
       var state = result.state;
-      buildComponentList(state.names, state.running);
+      buildComponentList(state.names, decodeStateArray(state.state), state.dependencies);
     }, function(err) {
       listEl.innerHTML = '<li>Error loading components</li>';
       console.error('ListComponents failed:', err);
     });
   }
 
-  function buildComponentList(names, running) {
+  // rosbridge sends uint8[] fields as a base64 string rather than a JS array
+  function decodeStateArray(states) {
+    if (typeof states !== 'string') {
+      return states;
+    }
+    var binary = atob(states);
+    var arr = new Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+      arr[i] = binary.charCodeAt(i);
+    }
+    return arr;
+  }
+
+  function isFailed(state) {
+    return state === STATE_FAILURE || state === STATE_DEPENDENCY_FAILURE;
+  }
+
+  function isChecked(state) {
+    return state === STATE_RUNNING || state === STATE_SHUTTING_DOWN;
+  }
+
+  function buildComponentList(names, states, dependencies) {
     listEl.innerHTML = '';
     componentStates = {};
     for (var i = 0; i < names.length; i++) {
       var name = names[i];
-      var isRunning = running[i];
+      var state = states[i];
+      var deps = JSON.parse(dependencies[i] || '[]');
 
       var li = document.createElement('li');
       var label = document.createElement('label');
       var cb = document.createElement('input');
       cb.type = 'checkbox';
-      cb.checked = isRunning;
+      cb.checked = isChecked(state);
+      cb.disabled = state === STATE_SHUTTING_DOWN;
       cb.dataset.component = name;
       cb.addEventListener('change', onCheckboxChange);
+      label.className = isFailed(state) ? 'comp-failed' : '';
       label.appendChild(cb);
       label.appendChild(document.createTextNode(' ' + name));
+      label.addEventListener('mouseenter', onLabelMouseEnter);
+      label.addEventListener('mouseleave', onLabelMouseLeave);
       li.appendChild(label);
+
+      var logBtn = document.createElement('button');
+      logBtn.className = 'log-btn';
+      logBtn.title = 'Show log for "' + name + '"';
+      logBtn.textContent = '📄';
+      logBtn.dataset.component = name;
+      logBtn.addEventListener('click', onLogButtonClick);
+      li.appendChild(logBtn);
+
       listEl.appendChild(li);
 
-      componentStates[name] = { running: isRunning, checkbox: cb };
+      componentStates[name] = {
+        state: state, dependencies: deps,
+        checkbox: cb, label: label
+      };
     }
   }
 
-  function updateComponentUI(names, running) {
+  function updateComponentUI(names, states, dependencies) {
     for (var i = 0; i < names.length; i++) {
       var name = names[i];
-      var isRunning = running[i];
-      if (componentStates[name]) {
-        componentStates[name].running = isRunning;
+      var state = states[i];
+      var entry = componentStates[name];
+      if (entry) {
+        entry.state = state;
+        entry.dependencies = JSON.parse(dependencies[i] || '[]');
+        entry.label.className = isFailed(state) ? 'comp-failed' : '';
+        entry.checkbox.disabled = state === STATE_SHUTTING_DOWN;
         if (!pendingActions[name]) {
-          componentStates[name].checkbox.checked = isRunning;
+          entry.checkbox.checked = isChecked(state);
         }
       } else {
         // New component appeared — rebuild
-        buildComponentList(names, running);
+        buildComponentList(names, states, dependencies);
         return;
       }
     }
+  }
+
+  // ── Hover popup ──────────────────────────────────────────────
+  function onLabelMouseEnter(e) {
+    var label = e.currentTarget;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(function() {
+      showPopup(label);
+    }, HOVER_DELAY_MS);
+  }
+
+  function onLabelMouseLeave() {
+    clearTimeout(hoverTimer);
+    hidePopup();
+  }
+
+  function showPopup(label) {
+    var name = label.querySelector('input').dataset.component;
+    var entry = componentStates[name];
+    if (!entry) {
+      return;
+    }
+
+    var html = '<strong>' + name + '</strong>: ' + (STATE_NAMES[entry.state] || entry.state);
+    if (entry.dependencies.length === 0) {
+      html += '<div class="dep-line">no dependencies</div>';
+    } else {
+      for (var i = 0; i < entry.dependencies.length; i++) {
+        var depName = entry.dependencies[i];
+        var depEntry = componentStates[depName];
+        var depState = depEntry ? (STATE_NAMES[depEntry.state] || depEntry.state) : 'unknown';
+        html += '<div class="dep-line">' + depName + ': ' + depState + '</div>';
+      }
+    }
+    popupEl.innerHTML = html;
+
+    var rect = label.getBoundingClientRect();
+    popupEl.style.left = (rect.left + window.scrollX) + 'px';
+    popupEl.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    popupEl.style.display = 'block';
+  }
+
+  function hidePopup() {
+    popupEl.style.display = 'none';
   }
 
   function onCheckboxChange(e) {
@@ -167,12 +310,56 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
         // Revert checkbox on failure
         e.target.checked = !shouldRun;
         console.warn('Service call failed:', result.message);
+      } else {
+        syncCheckbox(name);
       }
     }, function(err) {
       delete pendingActions[name];
       e.target.checked = !shouldRun;
       console.error('Service call error:', err);
     });
+  }
+
+  // Re-apply the last known state to a checkbox once it's no longer pending
+  function syncCheckbox(name) {
+    var entry = componentStates[name];
+    if (entry) {
+      entry.checkbox.checked = isChecked(entry.state);
+    }
+  }
+
+  // ── Log modal ────────────────────────────────────────────────
+  var logModalOverlay = document.getElementById('log-modal-overlay');
+  var logModalTitle = document.getElementById('log-modal-title');
+  var logModalBody = document.getElementById('log-modal-body');
+  document.getElementById('log-modal-close').addEventListener('click', closeLogModal);
+  logModalOverlay.addEventListener('click', function(e) {
+    if (e.target === logModalOverlay) {
+      closeLogModal();
+    }
+  });
+
+  function onLogButtonClick(e) {
+    var name = e.currentTarget.dataset.component;
+    logModalTitle.textContent = 'Log: ' + name;
+    logModalBody.textContent = 'Loading...';
+    logModalOverlay.style.display = 'flex';
+
+    logClient.callService(new ROSLIB.ServiceRequest({ name: name }), function(result) {
+      if (logModalOverlay.style.display === 'none') {
+        return; // modal was closed before the response arrived
+      }
+      logModalBody.textContent = result.success
+        ? (result.log || '(empty log)')
+        : ('Error: ' + result.message);
+      logModalBody.scrollTop = logModalBody.scrollHeight;
+    }, function(err) {
+      logModalBody.textContent = 'Failed to fetch log: ' + err;
+    });
+  }
+
+  function closeLogModal() {
+    logModalOverlay.style.display = 'none';
   }
 
   // ── Joystick / cmd_vel ───────────────────────────────────────
