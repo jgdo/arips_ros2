@@ -44,7 +44,7 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             'arm_enabled',
-            default_value='true',
+            default_value='false',
             description='Spawn the arm_forward_position_controller',
         ),
         DeclareLaunchArgument(

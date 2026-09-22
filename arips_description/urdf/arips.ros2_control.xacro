@@ -15,7 +15,7 @@
                 <param name="reset_states_on_activate">"false"</param>  <!-- Reset position/velocity to zero on activation (default: true) -->
             </hardware>
             <xacro:if value="${kinect_enabled}">
-                <joint name="kinect_joint_0">
+                <joint name="kinect_joint">
                     <!-- Required Joint Parameters -->
                     <param name="motor_id">7</param>  <!-- Motor ID on serial bus: 1-253 -->
 

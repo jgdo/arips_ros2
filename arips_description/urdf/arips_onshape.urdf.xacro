@@ -15,27 +15,25 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Base lower.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Base_lower.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.756863_0.462745_0.109804_0.000000_0.000000">
-                <texture />
                 <color rgba="0.756863 0.462745 0.109804 1" />
             </material>
         </visual>
     </link>
     <link name="base_upper">
         <inertial>
-            <mass value="0.00167698" />
-            <origin xyz="0.033655 -0.0364095 0.313631" rpy="0 -0 0" />
-            <inertia ixx="0.000158733" ixy="5.84651e-06" ixz="-2.16466e-05" iyy="0.000158003" iyz="2.46039e-05" izz="4.27272e-05" />
+            <mass value="0.00176738" />
+            <origin xyz="0.0388387 -0.0417081 0.36814" rpy="0 -0 0" />
+            <inertia ixx="0.000256556" ixy="6.74702e-06" ixz="-3.03595e-05" iyy="0.000255786" iyz="3.40732e-05" izz="4.45347e-05" />
         </inertial>
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Base upper.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Base_upper.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.756863_0.462745_0.109804_0.000000_0.000000">
-                <texture />
                 <color rgba="0.756863 0.462745 0.109804 1" />
             </material>
         </visual>
@@ -52,7 +50,6 @@
                 <mesh filename="package://arips_description/meshes/Gripper.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
-                <texture />
                 <color rgba="0.647059 0.647059 0.647059 1" />
             </material>
         </visual>
@@ -60,17 +57,16 @@
     <link name="kinect_beam">
         <inertial>
             <mass value="0.000375246" />
-            <origin xyz="-2.02802e-19 -0.651131 -4.44089e-16" rpy="0 -0 0" />
+            <origin xyz="-1.93985e-19 -0.651131 -6.66134e-16" rpy="0 -0 0" />
             <inertia ixx="2.85294e-05" ixy="0" ixz="0" iyy="8.56168e-06" iyz="0" izz="1.99677e-05" />
         </inertial>
         <visual>
-            <origin xyz="0 0.1725 -1.216" rpy="0 -0 0" />
+            <origin xyz="0 0.1725 -1.442" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Kinect beam.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Kinect_beam.gltf" scale="1 1 1" />
             </geometry>
-            <material name="0.341176_0.776471_0.741176_0.000000_0.901961">
-                <texture />
-                <color rgba="0.341176 0.776471 0.741176 0.0980392" />
+            <material name="0.341176_0.776471_0.741176_0.000000_0.000000">
+                <color rgba="0.341176 0.776471 0.741176 0.1" />
             </material>
         </visual>
     </link>
@@ -81,12 +77,11 @@
             <inertia ixx="3.39268e-07" ixy="0" ixz="0" iyy="3.54568e-06" iyz="7.50064e-10" izz="3.66293e-06" />
         </inertial>
         <visual>
-            <origin xyz="-0.01 0.14 -1.166" rpy="0 -0 0" />
+            <origin xyz="-0.01 0.14 -1.392" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/kinect_link.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/kinect_mount.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.156863_0.156863_0.156863_0.000000_0.000000">
-                <texture />
                 <color rgba="0.156863 0.156863 0.156863 1" />
             </material>
         </visual>
@@ -94,16 +89,15 @@
     <link name="laptop">
         <inertial>
             <mass value="0.00232688" />
-            <origin xyz="-4.65948e-17 7.63278e-17 -0.0125" rpy="0 -0 0" />
+            <origin xyz="0 2.94903e-17 -0.0125" rpy="0 -0 0" />
             <inertia ixx="1.27299e-05" ixy="0" ixz="0" iyy="2.59544e-05" iyz="0" izz="3.84419e-05" />
         </inertial>
         <visual>
-            <origin xyz="-3.72758e-17 -0.00848802 -0.201" rpy="0 -0 0" />
+            <origin xyz="0 -0.00848802 -0.201" rpy="0 -0 0" />
             <geometry>
                 <mesh filename="package://arips_description/meshes/Laptop.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.156863_0.156863_0.156863_0.000000_0.000000">
-                <texture />
                 <color rgba="0.156863 0.156863 0.156863 1" />
             </material>
         </visual>
@@ -117,10 +111,9 @@
         <visual>
             <origin xyz="-0.125 0.13 -0.676" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link 0.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_0.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.498039_0.498039_0.498039_0.000000_0.000000">
-                <texture />
                 <color rgba="0.498039 0.498039 0.498039 1" />
             </material>
         </visual>
@@ -134,10 +127,9 @@
         <visual>
             <origin xyz="-0.1 0.14 -0.676" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link 1.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_1.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.980392_0.713725_0.003922_0.000000_0.000000">
-                <texture />
                 <color rgba="0.980392 0.713726 0.00392157 1" />
             </material>
         </visual>
@@ -151,10 +143,9 @@
         <visual>
             <origin xyz="0.07 0.14 -0.666" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link 2.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_2.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.615686_0.811765_0.929412_0.000000_0.000000">
-                <texture />
                 <color rgba="0.615686 0.811765 0.929412 1" />
             </material>
         </visual>
@@ -168,10 +159,9 @@
         <visual>
             <origin xyz="0.07 -0.01 -0.656" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link 3.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_3.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
-                <texture />
                 <color rgba="0.647059 0.647059 0.647059 1" />
             </material>
         </visual>
@@ -186,10 +176,9 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Wheel left.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Wheel_left.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.141176_0.694118_0.650980_0.000000_0.000000">
-                <texture />
                 <color rgba="0.141176 0.694118 0.65098 1" />
             </material>
         </visual>
@@ -203,86 +192,87 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Wheel right.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Wheel_right.gltf" scale="1 1 1" />
             </geometry>
             <material name="0.141176_0.694118_0.650980_0.000000_0.000000">
-                <texture />
                 <color rgba="0.141176 0.694118 0.65098 1" />
             </material>
         </visual>
     </link>
-    <joint name="fastened_1_0" type="fixed">
+    <joint name="fastened_1" type="fixed">
         <origin xyz="-1.38778e-17 0 -0.2" rpy="-5.2711e-82 -3.08149e-33 3.42114e-49" />
         <axis xyz="0 0 1" />
         <parent link="link_3" />
         <child link="gripper" />
     </joint>
-    <joint name="fastened_2_0" type="fixed">
+    <joint name="fastened_2" type="fixed">
         <origin xyz="-0.01 -0.0325 0.05" rpy="5.55112e-17 -1.38667e-32 -3.04851e-32" />
         <axis xyz="0 -1 0" />
         <parent link="kinect_mount" />
         <child link="kinect_beam" />
     </joint>
-    <joint name="fastened_4_0" type="fixed">
+    <joint name="fastened_4" type="fixed">
         <origin xyz="-0.000349049 0.000361977 0.176" rpy="3.14159 -0 0" />
-        <axis xyz="0 0 -1" />
+        <axis xyz="-0 -0 1" />
         <parent link="base_upper" />
         <child link="laptop" />
     </joint>
-    <joint name="fastened_5_0" type="fixed">
+    <joint name="fastened_5" type="fixed">
         <origin xyz="0 0 0" rpy="0 -0 0" />
         <axis xyz="0 0 1" />
         <parent link="base_lower" />
         <child link="wheel_left" />
     </joint>
-    <joint name="fastened_6_0" type="fixed">
+    <joint name="fastened_6" type="fixed">
         <origin xyz="0 0 0" rpy="0 -0 0" />
         <axis xyz="0 0 1" />
         <parent link="base_lower" />
         <child link="wheel_right" />
     </joint>
-    <joint name="fastened_7_0" type="fixed">
+    <joint name="fastened_7" type="fixed">
         <origin xyz="0 0 0" rpy="0 -0 0" />
         <axis xyz="0 0 1" />
         <parent link="base_lower" />
         <child link="base_upper" />
     </joint>
-    <joint name="fastened_8_0" type="fixed">
+    <joint name="fastened_8" type="fixed">
         <origin xyz="0 0 0" rpy="0 -0 1.5708" />
         <axis xyz="0 0 1" />
         <parent link="base_footprint" />
         <child link="base_lower" />
     </joint>
-    <joint name="kinect_joint_0" type="continuous">
-        <origin xyz="0.01 -0.14 1.166" rpy="2.37643e-17 1.18821e-17 6.12323e-17" />
+    <joint name="kinect_joint" type="continuous">
+        <origin xyz="0.01 -0.14 1.392" rpy="2.37643e-17 1.18821e-17 6.12323e-17" />
         <axis xyz="-1 0 0" />
         <parent link="base_upper" />
         <child link="kinect_mount" />
     </joint>
-    <joint name="revolute_2_0" type="continuous">
+    <joint name="revolute_2" type="revolute">
         <origin xyz="-0.0191667 -0.01 0" rpy="-5.5358e-20 -5.84736e-19 0.290951" />
-        <axis xyz="0 0 -1" />
+        <axis xyz="-0 -0 1" />
         <parent link="link_0" />
         <child link="link_1" />
+        <limit effort="1" velocity="1" lower="-2.64715" upper="2.06524" />
     </joint>
-    <joint name="revolute_3_0" type="continuous">
+    <joint name="revolute_3" type="revolute">
         <origin xyz="-0.17 1.11022e-16 -0.01" rpy="1.55162e-24 -8.5589e-24 -2.38997" />
-        <axis xyz="0 0 -1" />
+        <axis xyz="-0 -0 1" />
         <parent link="link_1" />
         <child link="link_2" />
+        <limit effort="1" velocity="1" lower="-4.67861" upper="0.033776" />
     </joint>
-    <joint name="revolute_4_0" type="continuous">
+    <joint name="revolute_4" type="continuous">
         <origin xyz="-2.77556e-17 0.15 -0.01" rpy="-4.29773e-17 4.29663e-17 -1.0386" />
-        <axis xyz="0 0 -1" />
+        <axis xyz="-0 -0 1" />
         <parent link="link_2" />
         <child link="link_3" />
     </joint>
-    <joint name="slider_1_0" type="prismatic">
+    <joint name="slider_1" type="prismatic">
         <origin xyz="0.125 -0.13 0.518053" rpy="4.32978e-17 -6.16298e-33 3.88263e-34" />
         <axis xyz="0 0 1" />
         <parent link="base_upper" />
         <child link="link_0" />
-        <limit effort="1" velocity="1" lower="-0.5" upper="0.5" />
+        <limit effort="1" velocity="1" lower="-0.332053" upper="0.657947" />
     </joint>
 
     <xacro:if value="$(arg use_ros2_control)">

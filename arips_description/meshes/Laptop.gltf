@@ -284,7 +284,7 @@
         }
     ],
     "asset": {
-        "generator": "ONSHAPE BY PTC INC, 1.213",
+        "generator": "ONSHAPE BY PTC INC, 1.221",
         "version": "2.0"
     },
     "bufferViews": [
@@ -505,13 +505,13 @@
         },
         {
             "doubleSided": true,
-            "name": "0.341176_0.776471_0.741176_0.000000_0.901961",
+            "name": "0.341176_0.776471_0.741176_0.000000_0.000000",
             "pbrMetallicRoughness": {
                 "baseColorFactor": [
                     0.34117648005485535,
                     0.7764706015586853,
                     0.7411764860153198,
-                    0.09803921729326248
+                    1.0
                 ],
                 "metallicFactor": 0.0
             }

@@ -3,16 +3,16 @@
         {
             "bufferView": 0,
             "componentType": 5126,
-            "count": 4,
+            "count": 20,
             "max": [
                 0.0005000000237487257,
                 -0.17249999940395355,
-                1.5825011730194092
+                1.8085012435913086
             ],
             "min": [
                 0.0005000000237487257,
                 -1.1725000143051147,
-                0.8494987487792969
+                1.0754988193511963
             ],
             "name": "mesh72_coord_accessor",
             "type": "VEC3"
@@ -20,7 +20,7 @@
         {
             "bufferView": 1,
             "componentType": 5126,
-            "count": 4,
+            "count": 20,
             "max": [
                 1.0,
                 0.0,
@@ -37,9 +37,9 @@
         {
             "bufferView": 2,
             "componentType": 5125,
-            "count": 6,
+            "count": 54,
             "max": [
-                3
+                19
             ],
             "min": [
                 0
@@ -54,12 +54,12 @@
             "max": [
                 0.0005000000237487257,
                 -0.17249999940395355,
-                1.215999960899353
+                1.4420000314712524
             ],
             "min": [
                 -0.0005000000237487257,
                 -1.1029175519943237,
-                0.8494987487792969
+                1.0754988193511963
             ],
             "name": "mesh73_coord_accessor",
             "type": "VEC3"
@@ -101,12 +101,12 @@
             "max": [
                 0.0005000000237487257,
                 -0.17249999940395355,
-                1.5825011730194092
+                1.8085012435913086
             ],
             "min": [
                 -0.0005000000237487257,
                 -1.1029175519943237,
-                1.215999960899353
+                1.4420000314712524
             ],
             "name": "mesh74_coord_accessor",
             "type": "VEC3"
@@ -144,16 +144,16 @@
         {
             "bufferView": 9,
             "componentType": 5126,
-            "count": 6,
+            "count": 38,
             "max": [
                 0.0005000000237487257,
                 -1.1029175519943237,
-                1.5825011730194092
+                1.8085012435913086
             ],
             "min": [
                 -0.0005000000237487257,
                 -1.1725000143051147,
-                0.8494987487792969
+                1.0754988193511963
             ],
             "name": "mesh75_coord_accessor",
             "type": "VEC3"
@@ -161,7 +161,7 @@
         {
             "bufferView": 10,
             "componentType": 5126,
-            "count": 6,
+            "count": 38,
             "max": [
                 -0.0,
                 -0.9304175972938538,
@@ -178,9 +178,9 @@
         {
             "bufferView": 11,
             "componentType": 5125,
-            "count": 12,
+            "count": 108,
             "max": [
-                5
+                37
             ],
             "min": [
                 0
@@ -191,16 +191,16 @@
         {
             "bufferView": 12,
             "componentType": 5126,
-            "count": 4,
+            "count": 20,
             "max": [
                 -0.0005000000237487257,
                 -0.17249999940395355,
-                1.5825011730194092
+                1.8085012435913086
             ],
             "min": [
                 -0.0005000000237487257,
                 -1.1725000143051147,
-                0.8494987487792969
+                1.0754988193511963
             ],
             "name": "mesh76_coord_accessor",
             "type": "VEC3"
@@ -208,7 +208,7 @@
         {
             "bufferView": 13,
             "componentType": 5126,
-            "count": 4,
+            "count": 20,
             "max": [
                 -1.0,
                 -0.0,
@@ -225,9 +225,9 @@
         {
             "bufferView": 14,
             "componentType": 5125,
-            "count": 6,
+            "count": 54,
             "max": [
-                3
+                19
             ],
             "min": [
                 0
@@ -237,120 +237,120 @@
         }
     ],
     "asset": {
-        "generator": "ONSHAPE BY PTC INC, 1.213",
+        "generator": "ONSHAPE BY PTC INC, 1.221",
         "version": "2.0"
     },
     "bufferViews": [
         {
             "buffer": 0,
-            "byteLength": 48,
+            "byteLength": 240,
             "name": "mesh72_coord_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
-            "byteLength": 48,
-            "byteOffset": 48,
+            "byteLength": 240,
+            "byteOffset": 240,
             "name": "mesh72_norm_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
-            "byteLength": 24,
-            "byteOffset": 96,
+            "byteLength": 216,
+            "byteOffset": 480,
             "name": "mesh72_idx_bufferView",
             "target": 34963
         },
         {
             "buffer": 0,
             "byteLength": 48,
-            "byteOffset": 120,
+            "byteOffset": 696,
             "name": "mesh73_coord_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
             "byteLength": 48,
-            "byteOffset": 168,
+            "byteOffset": 744,
             "name": "mesh73_norm_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
             "byteLength": 24,
-            "byteOffset": 216,
+            "byteOffset": 792,
             "name": "mesh73_idx_bufferView",
             "target": 34963
         },
         {
             "buffer": 0,
             "byteLength": 48,
-            "byteOffset": 240,
+            "byteOffset": 816,
             "name": "mesh74_coord_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
             "byteLength": 48,
-            "byteOffset": 288,
+            "byteOffset": 864,
             "name": "mesh74_norm_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
             "byteLength": 24,
-            "byteOffset": 336,
+            "byteOffset": 912,
             "name": "mesh74_idx_bufferView",
             "target": 34963
         },
         {
             "buffer": 0,
-            "byteLength": 72,
-            "byteOffset": 360,
+            "byteLength": 456,
+            "byteOffset": 936,
             "name": "mesh75_coord_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
-            "byteLength": 72,
-            "byteOffset": 432,
+            "byteLength": 456,
+            "byteOffset": 1392,
             "name": "mesh75_norm_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
-            "byteLength": 48,
-            "byteOffset": 504,
+            "byteLength": 432,
+            "byteOffset": 1848,
             "name": "mesh75_idx_bufferView",
             "target": 34963
         },
         {
             "buffer": 0,
-            "byteLength": 48,
-            "byteOffset": 552,
+            "byteLength": 240,
+            "byteOffset": 2280,
             "name": "mesh76_coord_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
-            "byteLength": 48,
-            "byteOffset": 600,
+            "byteLength": 240,
+            "byteOffset": 2520,
             "name": "mesh76_norm_bufferView",
             "target": 34962
         },
         {
             "buffer": 0,
-            "byteLength": 24,
-            "byteOffset": 648,
+            "byteLength": 216,
+            "byteOffset": 2760,
             "name": "mesh76_idx_bufferView",
             "target": 34963
         }
     ],
     "buffers": [
         {
-            "byteLength": 672,
+            "byteLength": 2976,
             "name": "Total_buffer",
-            "uri": "data:application/octet-stream;base64,bxIDOtejML7jpZs/bxIDOmcsjb9mj8o/bxIDOnsUlr/jpZs/bxIDOmcsjb/AeFk/AACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAEAAAACAAAAAgAAAAMAAAAAAAAAbxIDOmcsjb/AeFk/bxIDumcsjb/AeFk/bxIDutejML7jpZs/bxIDOtejML7jpZs/AAAAgAymuz7ZL26/AAAAgAymuz7ZL26/AAAAgAymuz7ZL26/AAAAgAymuz7ZL26/AAAAAAEAAAACAAAAAgAAAAMAAAAAAAAAbxIDutejML7jpZs/bxIDumcsjb9mj8o/bxIDOmcsjb9mj8o/bxIDOtejML7jpZs/AAAAgAymuz7ZL24/AAAAgAymuz7ZL24/AAAAgAymuz7ZL24/AAAAgAymuz7ZL24/AAAAAAEAAAACAAAAAgAAAAMAAAAAAAAAbxIDumcsjb/AeFk/bxIDOmcsjb/AeFk/bxIDOnsUlr/jpZs/bxIDunsUlr/jpZs/bxIDOmcsjb9mj8o/bxIDumcsjb9mj8o/AAAAgNkvbr8Mpru+AAAAgNkvbr8Mpru+AAAAgAAAgL85eZqmAAAAgAAAgL85eZqmAAAAANkvbr8Mprs+AAAAANkvbr8Mprs+AAAAAAEAAAACAAAAAwAAAAIAAAAEAAAABAAAAAUAAAADAAAAAgAAAAMAAAAAAAAAbxIDutejML7jpZs/bxIDumcsjb/AeFk/bxIDunsUlr/jpZs/bxIDumcsjb9mj8o/AACAvwAAAIAAAACAAACAvwAAAIAAAACAAACAvwAAAIAAAACAAACAvwAAAIAAAACAAAAAAAEAAAACAAAAAgAAAAMAAAAAAAAA"
+            "uri": "data:application/octet-stream;base64,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"
         }
     ],
     "extensionsUsed": [
@@ -437,13 +437,13 @@
         },
         {
             "doubleSided": true,
-            "name": "0.341176_0.776471_0.741176_0.000000_0.901961",
+            "name": "0.341176_0.776471_0.741176_0.000000_0.000000",
             "pbrMetallicRoughness": {
                 "baseColorFactor": [
                     0.34117648005485535,
                     0.7764706015586853,
                     0.7411764860153198,
-                    0.09803921729326248
+                    1.0
                 ],
                 "metallicFactor": 0.0
             }

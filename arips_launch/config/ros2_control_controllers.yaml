@@ -24,7 +24,7 @@ arm_forward_position_controller:
 kinect_forward_position_controller:
   ros__parameters:
     joints:
-      - kinect_joint_0
+      - kinect_joint
     interface_name: position
 
     # # Command interfaces used by this controller
