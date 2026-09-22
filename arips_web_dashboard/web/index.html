@@ -52,6 +52,27 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   background: #1e1e1e; color: #d4d4d4;
 }
 #main { flex: 1; display: flex; align-items: center; justify-content: center; color: #888; }
+#main-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#main-image-area {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#main-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 12px;
+}
+#main img { max-width: 100%; max-height: 100%; object-fit: contain; }
 #bottom {
   height: 180px; border-top: 1px solid #ccc;
   display: flex; align-items: center; justify-content: center; position: relative;
@@ -107,7 +128,17 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     <h2>Components</h2>
     <ul id="components-list"><li>Loading...</li></ul>
   </div>
-  <div id="main"></div>
+  <div id="main">
+    <div id="main-inner">
+      <div id="main-image-area">
+      <div id="no-image" style="color:#bbb">Kinect image not available</div>
+      <img id="kinect-image" style="display:none"/>
+      </div>
+      <div id="main-footer">
+        <label style="color:#666;font-size:13px"><input type="checkbox" id="kinect-image-enable" checked> Show Kinect image</label>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="bottom">
@@ -601,6 +632,47 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
         }
       }
     });
+  }
+
+  // ── Kinect RGB preview (compressed) ─────────────────────────
+  var kinectImgEl = document.getElementById('kinect-image');
+  var noImageEl = document.getElementById('no-image');
+  var kinectImgSub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/kinect/rgb/image_raw/compressed',
+    messageType: 'sensor_msgs/msg/CompressedImage'
+  });
+
+  function kinectImageHandler(msg) {
+    try {
+      if (!msg || !msg.data) { return; }
+      var b64 = msg.data;
+      var url = 'data:image/jpeg;base64,' + b64;
+      if (kinectImgEl) {
+        kinectImgEl.src = url;
+        kinectImgEl.style.display = '';
+      }
+      if (noImageEl) { noImageEl.style.display = 'none'; }
+    } catch (e) {
+      console.warn('kinect image handler error', e);
+    }
+  }
+
+  // manage subscription based on checkbox
+  var kinectImageEnable = document.getElementById('kinect-image-enable');
+  if (kinectImageEnable && kinectImgSub) {
+    function updateImageSubscription() {
+      if (kinectImageEnable.checked) {
+        kinectImgSub.subscribe(kinectImageHandler);
+      } else {
+        kinectImgSub.unsubscribe(kinectImageHandler);
+        if (kinectImgEl) { kinectImgEl.style.display = 'none'; }
+        if (noImageEl) { noImageEl.style.display = ''; }
+      }
+    }
+    // enabled by default
+    updateImageSubscription();
+    kinectImageEnable.addEventListener('change', updateImageSubscription);
   }
 
 })();
