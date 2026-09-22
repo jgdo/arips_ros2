@@ -61,11 +61,36 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 #connection-status { position: absolute; top: 10px; right: 10px; font-size: 12px; }
 .connected { color: green; }
 .disconnected { color: red; }
+/* Kinect tilt control (vertical slider) */
+#kinect-tilt-control {
+  position: fixed;
+  right: 0;
+  top: 60px;
+  bottom: 60px;
+  width: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.95);
+  border-left: 1px solid #ccc;
+  padding: 8px;
+  z-index: 1000;
+}
+#kinect-tilt-value { margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.kinect-slider-wrapper { height: 240px; display: flex; align-items: center; }
+#kinect-tilt-slider { transform: rotate(-90deg); width: 220px; }
 </style>
 </head>
 <body>
 
 <div id="connection-status" class="disconnected">Disconnected</div>
+<div id="kinect-tilt-control">
+  <div id="kinect-tilt-value">0°</div>
+  <div class="kinect-slider-wrapper">
+    <input type="range" id="kinect-tilt-slider" min="-90" max="0" step="1" value="0">
+  </div>
+</div>
 <div id="comp-popup"></div>
 <div id="log-modal-overlay">
   <div id="log-modal">
@@ -93,7 +118,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 <script>
 (function() {
   // ── ROS connection ───────────────────────────────────────────
-  var wsUrl = 'ws://' + window.location.hostname + ':9090';
+  var wsUrl = 'ws://arips:9090';
   var ros = new ROSLIB.Ros({ url: wsUrl });
 
   var connEl = document.getElementById('connection-status');
@@ -489,6 +514,94 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     publishTwist();
     statusEl.textContent = 'vel: 0.00 / 0.00';
   });
+
+  // ── Kinect tilt slider ───────────────────────────────────────
+  var kinectPub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/kinect_forward_position_controller/commands',
+    messageType: 'std_msgs/msg/Float64MultiArray'
+  });
+
+  function publishKinectDeg(deg) {
+    var valEl = document.getElementById('kinect-tilt-value');
+    if (valEl) { valEl.textContent = deg + '°'; }
+    var rad = deg * Math.PI / 180.0;
+    var msg = new ROSLIB.Message({ data: [rad] });
+    try { kinectPub.publish(msg); } catch (e) { console.warn('kinect publish failed', e); }
+  }
+
+  var kinectSlider = document.getElementById('kinect-tilt-slider');
+  var lastKinectDeg = null;
+  var isKinectDragging = false;
+  var lastDragEndTime = 0; // ms since epoch
+  var suppressSliderPublish = false; // when true, slider input won't publish
+
+  // subscribe to joint_states to reflect the actual kinect_joint angle when not dragging
+  var jointStateSub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/joint_states',
+    messageType: 'sensor_msgs/msg/JointState'
+  });
+
+  jointStateSub.subscribe(function(msg) {
+    try {
+      var names = msg.name || [];
+      var idx = names.indexOf('kinect_joint');
+      if (idx >= 0 && Array.isArray(msg.position) && msg.position.length > idx) {
+        var rad = msg.position[idx];
+        var deg = Math.round(rad * 180.0 / Math.PI);
+        lastKinectDeg = deg;
+        if (!isKinectDragging) {
+          // update visible label always
+          var valEl = document.getElementById('kinect-tilt-value');
+          if (valEl) { valEl.textContent = deg + '°'; }
+
+          // if the user hasn't dragged recently, update the slider position
+          if (Date.now() - lastDragEndTime > 1000 && kinectSlider) {
+            var cur = parseInt(kinectSlider.value, 10);
+            if (cur !== deg) {
+              suppressSliderPublish = true;
+              // clamp deg into slider range
+              var clamped = Math.max(-90, Math.min(0, deg));
+              kinectSlider.value = clamped;
+              // ensure label matches exactly
+              if (valEl) { valEl.textContent = clamped + '°'; }
+              // allow input handler to run again shortly after
+              setTimeout(function() { suppressSliderPublish = false; }, 50);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('joint_states handler error', e);
+    }
+  });
+
+  if (kinectSlider) {
+    kinectSlider.addEventListener('pointerdown', function() { isKinectDragging = true; });
+    kinectSlider.addEventListener('input', function(e) {
+      if (suppressSliderPublish) { return; }
+      var deg = parseInt(e.target.value, 10);
+      publishKinectDeg(deg);
+    });
+    // detect end of drag anywhere on the page
+    window.addEventListener('pointerup', function() {
+      if (isKinectDragging) {
+        isKinectDragging = false;
+        lastDragEndTime = Date.now();
+        var valEl = document.getElementById('kinect-tilt-value');
+        if (valEl) {
+          if (lastKinectDeg !== null) {
+            // when not dragging, label should reflect joint_states
+            valEl.textContent = lastKinectDeg + '°';
+          } else {
+            // fallback to slider value
+            valEl.textContent = kinectSlider.value + '°';
+          }
+        }
+      }
+    });
+  }
 
 })();
 </script>
