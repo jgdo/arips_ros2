@@ -43,6 +43,7 @@ RUN apt-get update && apt-get upgrade -y \
         ros-${ROS_DISTRO}-controller-manager \
         ros-${ROS_DISTRO}-forward-command-controller \
         ros-${ROS_DISTRO}-ros2controlcli \
+        ros-${ROS_DISTRO}-joint-trajectory-controller \
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash

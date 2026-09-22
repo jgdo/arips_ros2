@@ -2,17 +2,15 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from launch.conditions import IfCondition
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration, TextSubstitution
 from launch_ros.actions import Node
-from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
-    usb_port = LaunchConfiguration('usb_port')
-    baudrate = LaunchConfiguration('baudrate')
-    joint_config_file = LaunchConfiguration('joint_config_file')
+    serial_port = LaunchConfiguration('serial_port')
+    baud_rate = LaunchConfiguration('baud_rate')
     arm_enabled = LaunchConfiguration('arm_enabled')
     kinect_enabled = LaunchConfiguration('kinect_enabled')
 
@@ -22,39 +20,28 @@ def generate_launch_description():
     controllers_file = os.path.join(
         get_package_share_directory('arips_launch'), 'config', 'ros2_control_controllers.yaml'
     )
-    default_joint_config_file = os.path.join(
-        get_package_share_directory('arips_launch'), 'config', 'servos.yaml'
-    )
 
-    robot_description = ParameterValue(
-        Command([
-            'xacro ', xacro_file,
-            ' use_ros2_control:=true',
-            ' usb_port:=', usb_port,
-            ' baudrate:=', baudrate,
-            ' joint_config_file:=', joint_config_file,
-            ' arm_enabled:=', arm_enabled,
-            ' kinect_enabled:=', kinect_enabled,
-        ]),
-        value_type=str,
-    )
+    robot_description = Command([
+        'xacro ', xacro_file,
+        ' use_ros2_control:=true',
+        ' serial_port:=', serial_port,
+        ' baud_rate:=', baud_rate,
+        ' arm_enabled:=', arm_enabled,
+        ' kinect_enabled:=', kinect_enabled,
+    ])
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'usb_port',
+            'serial_port',
             default_value='/dev/feetech_servo',
             description='Serial device for the feetech servo bus',
         ),
         DeclareLaunchArgument(
-            'baudrate',
+            'baud_rate',
             default_value='1000000',
             description='Feetech bus baud rate (currently ignored by feetech_ros2_driver v0.2.2, which hardcodes 1,000,000 baud)',
         ),
-        DeclareLaunchArgument(
-            'joint_config_file',
-            default_value=default_joint_config_file,
-            description='Path to the feetech per-joint calibration YAML',
-        ),
+
         DeclareLaunchArgument(
             'arm_enabled',
             default_value='true',
@@ -66,18 +53,41 @@ def generate_launch_description():
             description='Spawn the kinect_forward_position_controller',
         ),
 
-        Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
-            parameters=[{'robot_description': robot_description}],
+        # publish robot_description as a latched string topic, without the
+        # tf/joint_states side effects of robot_state_publisher
+        ExecuteProcess(
+            cmd=['python3', '-c', '''
+import sys
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile
+from std_msgs.msg import String
+
+rclpy.init()
+node = Node("feetech_robot_description_publisher")
+qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+publisher = node.create_publisher(String, "/feetech_robot_description", qos)
+publisher.publish(String(data=sys.argv[1]))
+try:
+    rclpy.spin(node)
+except (KeyboardInterrupt, ExternalShutdownException):
+    pass
+finally:
+    node.destroy_node()
+    if rclpy.ok():
+        rclpy.shutdown()
+''', robot_description],
             output='screen',
         ),
 
         Node(
             package='controller_manager',
             executable='ros2_control_node',
-            parameters=[{'robot_description': robot_description}, controllers_file],
+            parameters=[controllers_file],
+            remappings=[
+                    ("/robot_description", "/feetech_robot_description"),
+                ],
             output='screen',
         ),
 

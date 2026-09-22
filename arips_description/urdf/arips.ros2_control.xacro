@@ -1,24 +1,57 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:macro name="ros2_control_arips" params="usb_port baudrate joint_config_file arm_enabled kinect_enabled">
+    <xacro:macro name="ros2_control_arips" params="serial_port baud_rate arm_enabled kinect_enabled">
         <ros2_control name="arips_servos" type="system">
             <hardware>
-                <plugin>feetech_ros2_driver/FeetechHardwareInterface</plugin>
-                <param name="usb_port">${usb_port}</param>
-                <!-- feetech_ros2_driver v0.2.2 ignores this and hardcodes 1,000,000 baud; kept for forward-compat -->
-                <param name="baudrate">${baudrate}</param>
-                <param name="joint_config_file">${joint_config_file}</param>
+                <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
+                <param name="serial_port">${serial_port}</param>
+                <param name="baud_rate">${baud_rate}</param>
+
+
+                <param name="communication_timeout_ms">20</param>  <!-- Serial timeout: 1-1000 ms (default: 100) -->
+                <param name="use_sync_write">true</param>  <!-- Enable SyncWrite for multi-motor chains (default: true) -->
+                <param name="enable_mock_mode">false</param>  <!-- Simulation mode without hardware (default: false) -->
+                <param name="reset_states_on_activate">"false"</param>  <!-- Reset position/velocity to zero on activation (default: true) -->
             </hardware>
             <xacro:if value="${kinect_enabled}">
                 <joint name="kinect_joint_0">
-                    <param name="id">5</param>
-                    <command_interface name="position" />
-                    <state_interface name="position" />
-                    <state_interface name="velocity" />
+                    <!-- Required Joint Parameters -->
+                    <param name="motor_id">7</param>  <!-- Motor ID on serial bus: 1-253 -->
+
+                    <!-- Optional Joint Parameters -->
+                    <param name="operating_mode">0</param>  <!-- 0=Position, 1=Velocity, 2=PWM [default: 1] -->
+                    <param name="min_position">-1.5708</param>  <!-- Min position limit in radians (default: 0.0) -->
+                    <param name="max_position">0.0</param>
+                    <param name="max_velocity_steps">3400</param>  <!-- Motor's max velocity in steps/s, model-dependent: STS3215=3400, STS3032=2900 (default: 3400) -->
+                    <param name="max_velocity">5.22</param>  <!-- Max velocity limit in rad/s (default: 5.22) -->
+                    <param name="position_center_steps">1173</param>  <!-- Motor step mapped to 0 rad: 0-4095 (default: 4095 → [0, 2π); set to 2048 for [−π, +π]) -->
+
+                    <!-- Optional EEPROM parameters (omit any line to preserve the existing EEPROM value): -->
+                    <!-- <param name="p_coefficient">32</param> -->   <!-- P gain (0-255): addr 21 (Mode 0) -->
+                    <!-- <param name="d_coefficient">32</param> -->   <!-- D gain (0-255): addr 22 (Mode 0 only; ignored in Mode 1/2) -->
+                    <!-- <param name="i_coefficient">0</param> -->    <!-- I gain (0-255): addr 23 (Mode 0), addr 39 (Mode 1) -->
+                    <!-- <param name="protection_current">462</param> -->  <!-- Hardware current cutoff (0-65535, 6.5mA units; 462 ≈ 3.0A): addr 28/29 -->
+                    <!-- <param name="overload_torque">80</param> -->      <!-- Load threshold for overload protection (0-254): addr 36 -->
+                    <!-- <param name="return_delay">0</param> -->          <!-- Response delay (0-254, 2µs units): addr 7 -->
+                    <!-- <param name="deadband">2</param> -->              <!-- Position insensitive-area (0-255): addr 26/27 (CW_DEAD/CCW_DEAD), both set to the same value (Mode 0 only; ignored in Mode 1/2) -->
+
+                    <!-- Command Interfaces (Mode 0: Position) -->
+                    <command_interface name="position"/>  <!-- Target position in radians -->
+                    <command_interface name="velocity"/>  <!-- Max speed in rad/s -->
+                    <command_interface name="acceleration"/>  <!-- Acceleration value: 0-254 -->
+
+                    <!-- State Interfaces (always exported, declarations optional but recommended) -->
+                    <state_interface name="position"/>  <!-- Current position (radians) -->
+                    <state_interface name="velocity"/>  <!-- Current velocity (rad/s) -->
+                    <state_interface name="effort"/>  <!-- Motor load (-1.0 to +1.0) -->
+                    <state_interface name="voltage"/>  <!-- Supply voltage (volts) -->
+                    <state_interface name="temperature"/>  <!-- Internal temperature (°C) -->
+                    <state_interface name="current"/>  <!-- Motor current draw (amperes) -->
+                    <state_interface name="is_moving"/>  <!-- Motion status (1.0=moving, 0.0=stopped) -->
                 </joint>
             </xacro:if>
-            <xacro:if value="${arm_enabled}">
+            <!-- <xacro:if value="${arm_enabled}">
                 <joint name="revolute_2_0">
                     <param name="id">1</param>
                     <command_interface name="position" />
@@ -43,7 +76,7 @@
                     <state_interface name="position" />
                     <state_interface name="velocity" />
                 </joint>
-            </xacro:if>
+            </xacro:if> -->
         </ros2_control>
     </xacro:macro>
 
