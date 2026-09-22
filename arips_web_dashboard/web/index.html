@@ -49,6 +49,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 #log-modal-body {
   flex: 1; overflow: auto; margin: 0; padding: 10px;
   font-family: monospace; font-size: 12px; white-space: pre-wrap;
+  background: #1e1e1e; color: #d4d4d4;
 }
 #main { flex: 1; display: flex; align-items: center; justify-content: center; color: #888; }
 #bottom {
@@ -342,24 +343,96 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   function onLogButtonClick(e) {
     var name = e.currentTarget.dataset.component;
     logModalTitle.textContent = 'Log: ' + name;
-    logModalBody.textContent = 'Loading...';
+    logModalBody.innerHTML = 'Loading...';
     logModalOverlay.style.display = 'flex';
 
     logClient.callService(new ROSLIB.ServiceRequest({ name: name }), function(result) {
       if (logModalOverlay.style.display === 'none') {
         return; // modal was closed before the response arrived
       }
-      logModalBody.textContent = result.success
-        ? (result.log || '(empty log)')
-        : ('Error: ' + result.message);
+      logModalBody.innerHTML = result.success
+        ? ansiToHtml(result.log || '(empty log)')
+        : ansiToHtml('Error: ' + result.message);
       logModalBody.scrollTop = logModalBody.scrollHeight;
     }, function(err) {
-      logModalBody.textContent = 'Failed to fetch log: ' + err;
+      logModalBody.innerHTML = ansiToHtml('Failed to fetch log: ' + err);
     });
   }
 
   function closeLogModal() {
     logModalOverlay.style.display = 'none';
+  }
+
+  // Renders captured stdout/stderr (piped through a pty, so it retains ANSI
+  // SGR color codes) as HTML spans instead of raw escape sequences.
+  function ansiToHtml(text) {
+    var FG = {
+      30: '#000000', 31: '#e06c75', 32: '#98c379', 33: '#e5c07b',
+      34: '#61afef', 35: '#c678dd', 36: '#56b6c2', 37: '#d4d4d4',
+      90: '#5c6370', 91: '#e06c75', 92: '#98c379', 93: '#e5c07b',
+      94: '#61afef', 95: '#c678dd', 96: '#56b6c2', 97: '#ffffff'
+    };
+    var BG = {
+      40: '#000000', 41: '#e06c75', 42: '#98c379', 43: '#e5c07b',
+      44: '#61afef', 45: '#c678dd', 46: '#56b6c2', 47: '#d4d4d4'
+    };
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    var out = '';
+    var spanOpen = false;
+    var fg = null, bg = null, bold = false;
+    var lastIndex = 0;
+    var re = /\x1b\[([0-9;]*)m/g;
+    var match;
+
+    function flushSpan() {
+      if (spanOpen) {
+        out += '</span>';
+        spanOpen = false;
+      }
+      var style = '';
+      if (fg) style += 'color:' + fg + ';';
+      if (bg) style += 'background-color:' + bg + ';';
+      if (bold) style += 'font-weight:bold;';
+      if (style) {
+        out += '<span style="' + style + '">';
+        spanOpen = true;
+      }
+    }
+
+    while ((match = re.exec(text)) !== null) {
+      out += escapeHtml(text.slice(lastIndex, match.index));
+      lastIndex = re.lastIndex;
+
+      var codes = match[1].length ? match[1].split(';').map(Number) : [0];
+      for (var i = 0; i < codes.length; i++) {
+        var code = codes[i];
+        if (code === 0) {
+          fg = null; bg = null; bold = false;
+        } else if (code === 1) {
+          bold = true;
+        } else if (code === 22) {
+          bold = false;
+        } else if (code === 39) {
+          fg = null;
+        } else if (code === 49) {
+          bg = null;
+        } else if (FG[code] !== undefined) {
+          fg = FG[code];
+        } else if (BG[code] !== undefined) {
+          bg = BG[code];
+        }
+      }
+      flushSpan();
+    }
+    out += escapeHtml(text.slice(lastIndex));
+    if (spanOpen) {
+      out += '</span>';
+    }
+    return out;
   }
 
   // ── Joystick / cmd_vel ───────────────────────────────────────

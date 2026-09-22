@@ -171,6 +171,10 @@ class ComponentManagerNode(Node):
     @staticmethod
     def _run_launch(package: str, launch_file: str, log_write_fd: int) -> None:
         """Entry point for the child process. Runs a LaunchService."""
+        # New session/process group so the whole subprocess tree (including
+        # nodes launch spawns) can be signaled together via os.killpg.
+        os.setsid()
+
         # Redirect stdout/stderr before anything else so descendant
         # subprocesses launched by the LaunchService inherit it too.
         os.dup2(log_write_fd, 1)
@@ -280,22 +284,29 @@ class ComponentManagerNode(Node):
 
     @staticmethod
     def _signal_and_escalate(proc: multiprocessing.Process) -> None:
-        """Send SIGINT, then escalate to SIGKILL if it doesn't exit in time."""
+        """Send SIGINT, then escalate to SIGKILL if it doesn't exit in time.
+
+        Signals the whole process group (see ``_run_launch``'s ``setsid``) so
+        nodes spawned by the launch file are reached too, not just the
+        top-level launch process.
+        """
         try:
-            os.kill(proc.pid, signal.SIGINT)
+            pgid = os.getpgid(proc.pid)
+        except ProcessLookupError:
+            return
+        try:
+            os.killpg(pgid, signal.SIGINT)
         except OSError:
-            print(f'Failed to send SIGINT to process {proc.pid}')
-            pass
+            print(f'Failed to send SIGINT to process group {pgid}')
         deadline = time.monotonic() + 5.0
         while proc.is_alive() and time.monotonic() < deadline:
             time.sleep(0.2)
         if proc.is_alive():
             try:
-                print(f'Escalating to SIGKILL for process {proc.pid}')
-                proc.kill()
+                print(f'Escalating to SIGKILL for process group {pgid}')
+                os.killpg(pgid, signal.SIGKILL)
             except OSError:
-                print(f'Failed to kill process {proc.pid}')
-                pass
+                print(f'Failed to kill process group {pgid}')
 
     def _cascade_stop_dependencies(self, name: str) -> None:
         """After *name* has stopped, remove it as a source from its
