@@ -19,4 +19,7 @@ components:
     package: kinect_ros2
     file: launch/kinect.launch.py
     dependencies: [base_power]
-  
+  shutdown:
+    package: arips_launch
+    file: launch/shutdown.launch.py
+    dependencies: [base_power]

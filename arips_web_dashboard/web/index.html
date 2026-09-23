@@ -120,6 +120,26 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 }
 #joystick-zone { width: 160px; height: 160px; }
 #cmd-vel-status { position: absolute; top: 4px; font-size: 16px; }
+#shutdown-button {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 1500;
+  padding: 10px 16px;
+  border: 1px solid #b71c1c;
+  border-radius: 999px;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+#shutdown-button:hover { background: #b71c1c; }
+#shutdown-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
 .connected { color: green; }
 .disconnected { color: red; }
 /* Kinect tilt control (vertical slider) */
@@ -193,6 +213,8 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   <div id="joystick-zone"></div>
   <div id="cmd-vel-status">cmd_vel: 0.00 / 0.00</div>
 </div>
+
+<button id="shutdown-button" type="button">Shutdown</button>
 
 <script>
 (function() {
@@ -333,6 +355,11 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
       var name = names[i];
       var state = states[i];
       var deps = JSON.parse(dependencies[i] || '[]');
+
+      // Magically skip the shutdown component in the UI
+      if (name === 'shutdown') {
+        continue;
+      }
 
       var li = document.createElement('li');
       var label = document.createElement('label');
@@ -578,11 +605,41 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   });
 
   var statusEl = document.getElementById('cmd-vel-status');
+  var shutdownButton = document.getElementById('shutdown-button');
   var linearX = 0;
   var angularZ = 0;
   var maxLinear = 0.5;  // m/s
   var maxAngular = 1.0; // rad/s
   var publishTimer = null;
+
+  function setShutdownButtonBusy(isBusy) {
+    if (!shutdownButton) {
+      return;
+    }
+    shutdownButton.disabled = isBusy;
+    shutdownButton.textContent = isBusy ? 'Shutting down...' : 'Shutdown';
+  }
+
+  function onShutdownButtonClick() {
+    if (!window.confirm('Shutdown the robot?')) {
+      return;
+    }
+
+    setShutdownButtonBusy(true);
+    startClient.callService(new ROSLIB.ServiceRequest({ name: 'shutdown' }), function(result) {
+      setShutdownButtonBusy(false);
+      if (!result.success) {
+        console.warn('Shutdown start failed:', result.message);
+      }
+    }, function(err) {
+      setShutdownButtonBusy(false);
+      console.error('Shutdown start error:', err);
+    });
+  }
+
+  if (shutdownButton) {
+    shutdownButton.addEventListener('click', onShutdownButtonClick);
+  }
 
   function publishTwist() {
     var twist = new ROSLIB.Message({
