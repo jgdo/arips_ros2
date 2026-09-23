@@ -70,5 +70,11 @@ def generate_launch_description():
         Node(package='arips_serial_bridge',
              executable='serial_node',
              name='serial_node',
-        )
+        ),
+
+        Node(package='laptop_battery_monitor',
+             executable='battery_node',
+             name='laptop_battery_node',
+             remappings=[('/battery_state', '/laptop_battery_state')],
+        ),
     ])

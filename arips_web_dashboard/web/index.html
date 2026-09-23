@@ -10,6 +10,47 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+#header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid #ccc;
+  background: #f9f9f9;
+  flex: 0 0 auto;
+}
+#header-left,
+#header-center,
+#header-right {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+#header-left,
+#header-right {
+  flex: 1 1 0;
+}
+#header-center {
+  flex: 0 0 auto;
+  justify-content: center;
+}
+#header-right {
+  justify-content: flex-end;
+  color: #666;
+  font-size: 13px;
+}
+#battery-status,
+#connection-status {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  white-space: nowrap;
+}
 #top { display: flex; flex: 1; overflow: hidden; }
 #sidebar {
   width: 260px; min-width: 200px; border-right: 1px solid #ccc;
@@ -78,15 +119,14 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   display: flex; align-items: center; justify-content: center; position: relative;
 }
 #joystick-zone { width: 160px; height: 160px; }
-#status { position: absolute; top: 4px; right: 10px; font-size: 12px; }
-#connection-status { position: absolute; top: 10px; right: 10px; font-size: 12px; }
+#cmd-vel-status { position: absolute; top: 4px; font-size: 16px; }
 .connected { color: green; }
 .disconnected { color: red; }
 /* Kinect tilt control (vertical slider) */
 #kinect-tilt-control {
   position: fixed;
   right: 0;
-  top: 60px;
+  top: 72px;
   bottom: 60px;
   width: 68px;
   display: flex;
@@ -105,7 +145,15 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 </head>
 <body>
 
-<div id="connection-status" class="disconnected">Disconnected</div>
+<header id="header">
+  <div id="header-left">
+    <div id="battery-status" class="disconnected">Battery: waiting</div>
+  </div>
+  <div id="header-center">
+    <div id="connection-status" class="disconnected">rosbridge: Disconnected</div>
+  </div>
+  <div id="header-right">ARIPS Dashboard</div>
+</header>
 <div id="kinect-tilt-control">
   <div id="kinect-tilt-value">0°</div>
   <div class="kinect-slider-wrapper">
@@ -143,7 +191,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 
 <div id="bottom">
   <div id="joystick-zone"></div>
-  <div id="status">vel: 0.00 / 0.00</div>
+  <div id="cmd-vel-status">cmd_vel: 0.00 / 0.00</div>
 </div>
 
 <script>
@@ -153,19 +201,50 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   var ros = new ROSLIB.Ros({ url: wsUrl });
 
   var connEl = document.getElementById('connection-status');
+  var batteryEl = document.getElementById('battery-status');
   ros.on('connection', function() {
-    connEl.textContent = 'Connected';
+    connEl.textContent = 'rosbridge: Connected';
     connEl.className = 'connected';
     fetchComponents();
   });
   ros.on('error', function() {
-    connEl.textContent = 'Error';
+    connEl.textContent = 'rosbridge: Error';
     connEl.className = 'disconnected';
   });
   ros.on('close', function() {
-    connEl.textContent = 'Disconnected';
+    connEl.textContent = 'rosbridge: Disconnected';
     connEl.className = 'disconnected';
   });
+
+  var batterySub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/laptop_battery_state',
+    messageType: 'sensor_msgs/msg/BatteryState'
+  });
+
+  batterySub.subscribe(function(msg) {
+    updateBatteryStatus(msg);
+  });
+
+  function updateBatteryStatus(msg) {
+    var statusNames = {
+      0: 'unknown',
+      1: 'charging',
+      2: 'discharging',
+      3: 'not charging',
+      4: 'full'
+    };
+    var percentage = typeof msg.percentage === 'number' && msg.percentage >= 0
+      ? Math.round(msg.percentage * 100)
+      : null;
+    var status = statusNames[msg.power_supply_status] || 'unknown';
+    var text = 'Battery: ' + (percentage === null ? 'unknown' : percentage + '%');
+    if (status !== 'unknown') {
+      text += ' (' + status + ')';
+    }
+    batteryEl.textContent = text;
+    batteryEl.className = percentage === null || percentage <= 15 ? 'disconnected' : 'connected';
+  }
 
   // ── Component list ───────────────────────────────────────────
   var listEl = document.getElementById('components-list');
@@ -498,7 +577,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     messageType: 'geometry_msgs/msg/Twist'
   });
 
-  var statusEl = document.getElementById('status');
+  var statusEl = document.getElementById('cmd-vel-status');
   var linearX = 0;
   var angularZ = 0;
   var maxLinear = 0.5;  // m/s
@@ -532,7 +611,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     var distance = Math.min(data.distance, 60) / 60; // normalize 0..1
     linearX = data.vector.y * distance * maxLinear;
     angularZ = -data.vector.x * distance * maxAngular;
-    statusEl.textContent = 'vel: ' + linearX.toFixed(2) + ' / ' + angularZ.toFixed(2);
+    statusEl.textContent = 'cmd_vel: ' + linearX.toFixed(2) + ' / ' + angularZ.toFixed(2);
   });
 
   joystick.on('end', function() {
@@ -543,7 +622,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     linearX = 0;
     angularZ = 0;
     publishTwist();
-    statusEl.textContent = 'vel: 0.00 / 0.00';
+    statusEl.textContent = 'cmd_vel: 0.00 / 0.00';
   });
 
   // ── Kinect tilt slider ───────────────────────────────────────
