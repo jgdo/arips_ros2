@@ -1,0 +1,8 @@
+route_graph_generator:
+  ros__parameters:
+    map_topic: /map
+    semantic_map_topic: /semantic_map
+    corrected_map_topic: /corrected_map
+    segmentation_topic: /map_segmentation
+    minimum_segment_size: 500
+    marker_height: 0.02
