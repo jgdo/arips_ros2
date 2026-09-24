@@ -164,7 +164,7 @@ def build_route_graph(
         kind: str,
         segment_index: Optional[int] = None,
     ) -> None:
-        edge_key = tuple(sorted((from_node, to_node)))
+        edge_key = (from_node, to_node)
         if edge_key in edge_keys:
             return
         edge_keys.add(edge_key)
@@ -184,6 +184,11 @@ def build_route_graph(
             door_nodes[door_index]['B'],
             'door',
         )
+        add_edge(
+            door_nodes[door_index]['B'],
+            door_nodes[door_index]['A'],
+            'door',
+        )
 
     for segment_index, entries in segment_entries.items():
         if segment_index == 0:
@@ -192,6 +197,7 @@ def build_route_graph(
             if first[1] == second[1]:
                 continue
             add_edge(first[2], second[2], 'segment', segment_index)
+            add_edge(second[2], first[2], 'segment', segment_index)
 
     segment_points = {
         segment_index: [
@@ -255,8 +261,11 @@ def make_route_graph_marker_array(
 def route_graph_to_geojson(graph: RouteGraph, frame_id: str) -> dict:
     """Serialize a route graph as a local-map GeoJSON FeatureCollection."""
     node_by_id = {node.node_id: node for node in graph.nodes}
+    node_index_by_id = {
+        node.node_id: index for index, node in enumerate(graph.nodes)
+    }
     features = []
-    for node in graph.nodes:
+    for node_index, node in enumerate(graph.nodes):
         features.append(
             {
                 'type': 'Feature',
@@ -266,7 +275,7 @@ def route_graph_to_geojson(graph: RouteGraph, frame_id: str) -> dict:
                 },
                 'properties': {
                     'feature_type': 'node',
-                    'node_id': node.node_id,
+                    'id': node_index,
                     'door_index': node.door_index,
                     'side': node.side,
                     'segment_index': node.segment_index,
@@ -274,7 +283,7 @@ def route_graph_to_geojson(graph: RouteGraph, frame_id: str) -> dict:
             }
         )
 
-    for edge in graph.edges:
+    for edge_index, edge in enumerate(graph.edges):
         from_node = node_by_id[edge.from_node]
         to_node = node_by_id[edge.to_node]
         features.append(
@@ -289,12 +298,13 @@ def route_graph_to_geojson(graph: RouteGraph, frame_id: str) -> dict:
                 },
                 'properties': {
                     'feature_type': 'edge',
-                    'edge_id': edge.edge_id,
-                    'from': edge.from_node,
-                    'to': edge.to_node,
-                    'bidirectional': True,
+                    'id': edge_index,
+                    'startid': node_index_by_id[edge.from_node],
+                    'endid': node_index_by_id[edge.to_node],
+                    'bidirectional': False,
                     'kind': edge.kind,
                     'segment_index': edge.segment_index,
+                    'frame': 'map',
                 },
             }
         )

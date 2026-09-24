@@ -79,9 +79,9 @@ def test_build_route_graph_adds_one_door_edge_and_cross_door_segment_edges():
     assert [node.node_id for node in graph.nodes] == [
         'door_0_A', 'door_0_B', 'door_1_A', 'door_1_B'
     ]
-    assert len(graph.edges) == 6
-    assert sum(edge.kind == 'door' for edge in graph.edges) == 2
-    assert sum(edge.kind == 'segment' for edge in graph.edges) == 4
+    assert len(graph.edges) == 12
+    assert sum(edge.kind == 'door' for edge in graph.edges) == 4
+    assert sum(edge.kind == 'segment' for edge in graph.edges) == 8
     assert len(graph.segment_points[1]) == 4
 
 
@@ -95,7 +95,7 @@ def test_build_route_graph_ignores_segment_zero_for_cross_door_edges():
 
     graph = build_route_graph(semantic_map, grid_map, segmentation, 0.5)
 
-    assert len(graph.edges) == 2
+    assert len(graph.edges) == 4
     assert set(graph.segment_points) == {0}
 
 
@@ -111,7 +111,7 @@ def test_build_route_graph_skips_invalid_door():
 
     assert graph.skipped_door_indices == [0]
     assert len(graph.nodes) == 2
-    assert len(graph.edges) == 1
+    assert len(graph.edges) == 2
 
 
 def test_write_route_graph_geojson_contains_nodes_and_edges(tmp_path):
@@ -126,10 +126,26 @@ def test_write_route_graph_geojson_contains_nodes_and_edges(tmp_path):
 
     assert document['type'] == 'FeatureCollection'
     assert document['properties']['frame_id'] == 'map'
-    assert len(document['features']) == 3
+    assert len(document['features']) == 4
     assert {feature['geometry']['type'] for feature in document['features']} == {
         'Point', 'LineString'
     }
+    node_features = [
+        feature
+        for feature in document['features']
+        if feature['properties']['feature_type'] == 'node'
+    ]
+    edge_features = [
+        feature
+        for feature in document['features']
+        if feature['properties']['feature_type'] == 'edge'
+    ]
+    assert all(isinstance(feature['properties']['id'], int)
+               for feature in node_features)
+    assert all(isinstance(feature['properties']['id'], int)
+               for feature in edge_features)
+    assert all(isinstance(feature['properties'][key], int)
+               for feature in edge_features for key in ('startid', 'endid'))
 
 
 def test_route_graph_markers_use_green_spheres_and_lines():
