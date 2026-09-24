@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>arips_semantic_map_msgs</name>
+  <version>0.0.0</version>
+  <license>BSD</license>
+  <description>ARIPS semantic map message definitions</description>
+  <maintainer email="markprediger@gmail.com">Mark Prediger</maintainer>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <depend>std_msgs</depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

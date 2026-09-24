@@ -1,0 +1,26 @@
+header: 
+  stamp: 
+    sec: 0
+    nanosec: 0
+  frame_id: "map"
+doors: 
+  - 
+    pivot: 
+      x: 0.69
+      y: -1.8
+    extent: 
+      x: 1.49
+      y: -1.8
+    open_angle_deg: 105.0
+  -
+    pivot: {x: 2.77, y: -3.12}
+    extent: {x: 2.77, y: -2.35}
+    open_angle_deg: -95.0
+  -
+    pivot:
+      x: -1.04
+      y: -1.81
+    extent:
+      x: -1.78
+      y: -1.81
+    open_angle_deg: -115.0
