@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import List, Optional, Tuple
+from copy import deepcopy
 import arips_semantic_map_msgs.msg as smm
 import yaml
 import math
@@ -77,15 +78,26 @@ class SemanticMap:
         self.publish_map()
 
     def save(self, filename: Path):
+        filename = Path(filename)
         with open(filename, "w") as file:
             file.write(message_to_yaml(self.map))
 
     def load(self, filename: Path):
+        filename = Path(filename)
         with open(filename, "r") as file:
             yaml_msg = yaml.safe_load(file)
             map = smm.SemanticMap()
             _message_from_yaml(yaml_msg, map)
             self.map = map
+
+    def add_door(self, door: smm.Door) -> str:
+        if not isinstance(door, smm.Door):
+            raise ValueError("Door must be a Door message")
+
+        self.map.doors.append(deepcopy(door))
+        door_name = f"door_{len(self.map.doors) - 1}"
+        self.publish_map()
+        return door_name
 
     def publish_map(self):
         self.map_pub.publish(self.map)

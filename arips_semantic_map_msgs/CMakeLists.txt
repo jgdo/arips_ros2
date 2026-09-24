@@ -9,6 +9,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/Point2D.msg"
     "msg/Door.msg"
     "msg/SemanticMap.msg"
+    "srv/HandleMapFile.srv"
+    "srv/AddDoor.srv"
     DEPENDENCIES std_msgs
 )
 

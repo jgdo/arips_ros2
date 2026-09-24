@@ -1,0 +1,12 @@
+<library path="arips_semantic_map_rviz">
+  <class name="arips_semantic_map_rviz/SemanticMapPanel"
+         type="arips_semantic_map_rviz::SemanticMapPanel"
+         base_class_type="rviz_common::Panel">
+    <description>Controls and edits the ARIPS semantic map.</description>
+  </class>
+  <class name="arips_semantic_map_rviz/AddDoorTool"
+         type="arips_semantic_map_rviz::AddDoorTool"
+         base_class_type="rviz_common::Tool">
+    <description>Draws a new semantic-map door on the map ground plane.</description>
+  </class>
+</library>

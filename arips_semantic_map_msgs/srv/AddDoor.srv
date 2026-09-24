@@ -1,0 +1,5 @@
+Door door
+---
+bool success
+string new_door_name
+string error_message

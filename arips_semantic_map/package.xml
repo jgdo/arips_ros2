@@ -55,6 +55,7 @@
   <depend>visualization_msgs</depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-pyyaml</exec_depend>
+  <test_depend>python3-pytest</test_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
