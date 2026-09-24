@@ -2,6 +2,11 @@ from copy import deepcopy
 import math
 from typing import Iterable, Optional, Sequence, Tuple
 
+from arips_route_graph.route_graph import (
+    build_route_graph,
+    make_route_graph_marker_array,
+    write_route_graph_geojson,
+)
 from arips_semantic_map_msgs.msg import SemanticMap
 from geometry_msgs.msg import Point, Quaternion
 from nav_msgs.msg import OccupancyGrid
@@ -230,15 +235,24 @@ def make_segmentation_marker(
     marker.scale.x = grid_map.info.resolution
     marker.scale.y = grid_map.info.resolution
     marker.scale.z = marker_height
-    marker.color.a = 1.0
+    marker.color.a = 0.5
+    segment_palette_indices = {
+        int(segment_number): palette_index
+        for palette_index, segment_number in enumerate(
+            segment_number
+            for segment_number in np.unique(labels)
+            if segment_number != 0
+        )
+    }
 
     for (row, column), segment_number in np.ndenumerate(labels):
         if segment_number == 0:
             continue
         marker.points.append(_grid_to_world(grid_map, column, row))
-        red, green, blue = PALETTE[(int(segment_number) - 1) % len(PALETTE)]
+        palette_index = segment_palette_indices[int(segment_number)]
+        red, green, blue = PALETTE[palette_index % len(PALETTE)]
         marker.colors.append(
-            ColorRGBA(r=red, g=green, b=blue, a=1.0)
+            ColorRGBA(r=red, g=green, b=blue, a=0.5)
         )
 
     return MarkerArray(markers=[marker])
@@ -254,18 +268,38 @@ class RouteGraphGenerator(Node):
         self.declare_parameter('corrected_map_topic', '/corrected_map')
         self.declare_parameter('segmentation_topic', '/map_segmentation')
         self.declare_parameter('minimum_segment_size', 500)
-        self.declare_parameter('marker_height', 0.02)
+        self.declare_parameter('marker_height', 0.002)
+        self.declare_parameter('door_approach_distance', 0.5)
+        self.declare_parameter('geojson_path', '/tmp/arips_route_graph.geojson')
+        self.declare_parameter(
+            'route_graph_marker_topic', '/route_graph_markers'
+        )
+        self.declare_parameter('route_graph_node_diameter', 0.12)
+        self.declare_parameter('route_graph_edge_width', 0.03)
 
         map_topic = self.get_parameter('map_topic').value
         semantic_map_topic = self.get_parameter('semantic_map_topic').value
         corrected_map_topic = self.get_parameter('corrected_map_topic').value
         segmentation_topic = self.get_parameter('segmentation_topic').value
+        route_graph_marker_topic = self.get_parameter(
+            'route_graph_marker_topic'
+        ).value
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
         self._minimum_segment_size = int(
             self.get_parameter('minimum_segment_size').value
         )
         self._marker_height = float(self.get_parameter('marker_height').value)
+        self._door_approach_distance = float(
+            self.get_parameter('door_approach_distance').value
+        )
+        self._geojson_path = str(self.get_parameter('geojson_path').value)
+        self._route_graph_node_diameter = float(
+            self.get_parameter('route_graph_node_diameter').value
+        )
+        self._route_graph_edge_width = float(
+            self.get_parameter('route_graph_edge_width').value
+        )
         self._grid_map: Optional[OccupancyGrid] = None
         self._semantic_map: Optional[SemanticMap] = None
         self._corrected_map_publisher = self.create_publisher(
@@ -273,6 +307,9 @@ class RouteGraphGenerator(Node):
         )
         self._segmentation_publisher = self.create_publisher(
             MarkerArray, segmentation_topic, qos
+        )
+        self._route_graph_marker_publisher = self.create_publisher(
+            MarkerArray, route_graph_marker_topic, qos
         )
         self.create_subscription(
             OccupancyGrid, map_topic, self._grid_map_callback, qos
@@ -333,7 +370,46 @@ class RouteGraphGenerator(Node):
             self._grid_map, labels, self._marker_height
         )
         self._segmentation_publisher.publish(marker_msg)
-        self.get_logger().info(f'Rebuilt route graph and published segmentation with {len(marker_msg.markers[0].points)} points.')
+        self.get_logger().info(
+            'Rebuilt route graph and published segmentation with '
+            f'{len(marker_msg.markers[0].points)} points and {len(np.unique(labels))-1} segments.'
+        )
+
+        if self._semantic_map is None:
+            return
+        graph = build_route_graph(
+            self._semantic_map,
+            self._grid_map,
+            labels,
+            self._door_approach_distance,
+        )
+        for door_index in graph.skipped_door_indices:
+            self.get_logger().warning(
+                f'Skipping degenerate door {door_index} in route graph.'
+            )
+        self._route_graph_marker_publisher.publish(
+            make_route_graph_marker_array(
+                graph,
+                self._grid_map.header.frame_id,
+                self._route_graph_node_diameter,
+                self._route_graph_edge_width,
+            )
+        )
+        try:
+            write_route_graph_geojson(
+                graph,
+                self._grid_map.header.frame_id,
+                self._geojson_path,
+            )
+        except OSError as error:
+            self.get_logger().error(
+                f'Could not write route graph GeoJSON: {error}'
+            )
+            return
+        self.get_logger().info(
+            f'Wrote route graph GeoJSON to {self._geojson_path} '
+            f'with {len(graph.nodes)} nodes and {len(graph.edges)} edges.'
+        )
 
     def _publish_corrected_map(self, occupancy: np.ndarray) -> None:
         corrected_map = OccupancyGrid()

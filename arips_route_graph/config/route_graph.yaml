@@ -5,4 +5,9 @@ route_graph_generator:
     corrected_map_topic: /corrected_map
     segmentation_topic: /map_segmentation
     minimum_segment_size: 500
-    marker_height: 0.02
+    marker_height: 0.002
+    door_approach_distance: 0.5
+    geojson_path: /tmp/arips_route_graph.geojson
+    route_graph_marker_topic: /route_graph_markers
+    route_graph_node_diameter: 0.12
+    route_graph_edge_width: 0.03

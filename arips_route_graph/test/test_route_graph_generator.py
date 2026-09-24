@@ -99,3 +99,22 @@ def test_segmentation_marker_contains_colored_cell_centers():
         (0.75, 0.25, 0.0),
     ]
     assert len(marker.colors) == 2
+
+
+def test_segmentation_marker_maps_sparse_segments_to_consecutive_palette():
+    message = _grid(width=2, height=1, resolution=0.5)
+    labels = np.array([[4, 12]], dtype=np.uint16)
+
+    marker_array = make_segmentation_marker(message, labels, 0.02)
+
+    marker = marker_array.markers[0]
+    assert (marker.colors[0].r, marker.colors[0].g, marker.colors[0].b) == (
+        0.90,
+        0.16,
+        0.16,
+    )
+    assert (marker.colors[1].r, marker.colors[1].g, marker.colors[1].b) == (
+        0.16,
+        0.48,
+        0.90,
+    )

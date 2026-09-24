@@ -14,6 +14,9 @@ from rclpy.qos import QoSProfile, DurabilityPolicy
 import numpy as np
 
 
+MARKER_COLOR = (0.6, 0.3, 0.0, 1.0)
+
+
 def _message_from_yaml(values, msg) -> None:
     """Populate a ROS 2 message from the YAML mapping used by message_to_yaml."""
     field_types = msg.get_fields_and_field_types()
@@ -128,20 +131,17 @@ class SemanticMap:
 
         int_marker.pose.position.x = point.x
         int_marker.pose.position.y = point.y
-        int_marker.pose.position.z = 0.001  # to stand out in rviz
+        int_marker.pose.position.z = 0.01  # to stand out in rviz
         int_marker.pose.orientation.w = 1.0
         int_marker.pose.orientation.y = 1.0
 
-        # create a grey box marker
+        # create a marker
         sphere = Marker()
         sphere.type = Marker.SPHERE
         sphere.scale.x = 0.1
         sphere.scale.y = 0.1
         sphere.scale.z = 0.1
-        sphere.color.r = 0.0
-        sphere.color.g = 0.5
-        sphere.color.b = 0.5
-        sphere.color.a = 1.0
+        sphere.color.r, sphere.color.g, sphere.color.b, sphere.color.a = MARKER_COLOR
 
         # create a control which will move the sphere
         move_control = InteractiveMarkerControl()
@@ -165,30 +165,24 @@ class SemanticMap:
         int_marker.header.frame_id = "map"
         int_marker.name = f"door_{index}_outline"
 
-        int_marker.pose.position.z = 0.001  # to stand out in rviz
+        int_marker.pose.position.z = 0.01  # to stand out in rviz
 
         # create a control which will move the sphere
         control = InteractiveMarkerControl()
         control.interaction_mode = InteractiveMarkerControl.NONE
 
-        # create a grey box marker
+        # create a marker
         line = Marker()
         line.type = Marker.LINE_STRIP
         line.scale.x = 0.03  # line width
-        line.color.r = 0.0
-        line.color.g = 1.0
-        line.color.b = 0.0
-        line.color.a = 1.0
+        line.color.r, line.color.g, line.color.b, line.color.a = MARKER_COLOR
         line.points = [to_point(door.pivot), to_point(door.extent)]
         control.markers.append(line)
 
         line = Marker()
         line.type = Marker.LINE_STRIP
         line.scale.x = 0.01  # line width
-        line.color.r = 0.5
-        line.color.g = 0.7
-        line.color.b = 0.5
-        line.color.a = 1.0
+        line.color.r, line.color.g, line.color.b, line.color.a = MARKER_COLOR
 
         angle_rad = math.radians(door.open_angle_deg)
         num_steps = int(abs(angle_rad) / math.radians(15))
