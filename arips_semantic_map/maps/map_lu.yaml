@@ -1,26 +1,20 @@
-header: 
-  stamp: 
+header:
+  stamp:
     sec: 0
     nanosec: 0
-  frame_id: "map"
-doors: 
-  - 
-    pivot: 
-      x: 0.69
-      y: -1.8
-    extent: 
-      x: 1.49
-      y: -1.8
-    open_angle_deg: 105.0
-  -
-    pivot: {x: 2.77, y: -3.12}
-    extent: {x: 2.77, y: -2.35}
-    open_angle_deg: -95.0
-  -
-    pivot:
-      x: -1.04
-      y: -1.81
-    extent:
-      x: -1.78
-      y: -1.81
-    open_angle_deg: -115.0
+  frame_id: map
+doors:
+- pivot:
+    x: -0.7014223337173462
+    y: 2.0481314659118652
+  extent:
+    x: -1.534458875656128
+    y: 2.0481314659118652
+  open_angle_deg: 99.8658214397789
+- pivot:
+    x: -2.9442007541656494
+    y: 3.553597927093506
+  extent:
+    x: -2.932084798812866
+    y: 2.7057876586914062
+  open_angle_deg: -91.26433882173923
