@@ -6,6 +6,7 @@ import math
 from rosidl_runtime_py.convert import message_to_yaml
 from rosidl_runtime_py.utilities import get_message
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer, InteractiveMarker
+from interactive_markers.menu_handler import MenuHandler
 from visualization_msgs.msg import Marker, InteractiveMarkerControl, InteractiveMarkerFeedback
 import geometry_msgs.msg
 from rclpy.qos import QoSProfile, DurabilityPolicy
@@ -60,6 +61,8 @@ class SemanticMap:
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.map_pub = node.create_publisher(smm.SemanticMap, "semantic_map", qos)
         self.marker_server = InteractiveMarkerServer(node, "semantic_map_markers")
+        self.menu_handler = MenuHandler()
+        self.menu_handler.insert("Delete", callback=self._delete_door_callback)
         self.marker_server.applyChanges()
 
     @property
@@ -101,6 +104,8 @@ class SemanticMap:
                 feedback_callback=feedback,
                 feedback_type=InteractiveMarkerFeedback.MOUSE_UP,
             )
+            if marker.name.endswith(("_pivot", "_extent")):
+                self.menu_handler.apply(self.marker_server, marker.name)
         self.marker_server.applyChanges()
 
     def _create_door_point_control(self, index, point, field_name):
@@ -193,6 +198,18 @@ class SemanticMap:
 
     def _create_door_callback(self, door_index: int, point: Optional[smm.Point2D]):
         return lambda msg: self._interactive_marker_door_callback(msg, door_index, point)
+
+    def _delete_door_callback(self, feedback: InteractiveMarkerFeedback):
+        door_index = int(feedback.marker_name.split("_")[1])
+        if door_index >= len(self.map.doors):
+            self.node.get_logger().warning(
+                f"Ignoring delete request for missing door {door_index}."
+            )
+            return
+
+        del self.map.doors[door_index]
+        self.node.get_logger().info(f"Deleted door {door_index}.")
+        self.publish_map()
 
     def _interactive_marker_door_callback(
         self, feedback: InteractiveMarkerFeedback, door_index: int, point: Optional[smm.Point2D]
