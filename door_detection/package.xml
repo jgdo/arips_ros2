@@ -13,6 +13,8 @@
   <depend>image_geometry</depend>
   <depend>message_filters</depend>
   <depend>rclpy</depend>
+  <depend>rosidl_buffer_py</depend>
+  <depend>shared_buffer</depend>
   <depend>sensor_msgs</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>

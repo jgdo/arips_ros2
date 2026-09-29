@@ -15,13 +15,13 @@ from .projection import CameraProjector, project_ray_to_plane
 
 
 class StepDetectorNode(Node):
-    BASE_FRAME = 'arips_base'
+    BASE_FRAME = 'arips_wheel_center'
     FLOOR_HEIGHT = 0.0
     MODEL_WIDTH = 384
     MODEL_HEIGHT = 288
-    IMAGE_TOPIC = '/kinect/rgb/image_color'
+    IMAGE_TOPIC = '/kinect/rgb/image_raw'
     CAMERA_INFO_TOPIC = '/kinect/rgb/camera_info'
-    ANNOTATED_IMAGE_TOPIC = '/kinect/rgb/door_handle_image'
+    ANNOTATED_IMAGE_TOPIC = '/kinect/rgb/step_detector_image'
 
     def __init__(self):
         super().__init__('step_detector')
@@ -53,9 +53,10 @@ class StepDetectorNode(Node):
         )
         self._step_publisher = self.create_publisher(
             PolygonStamped,
-            'floor_step',
+            'door_step_polygon',
             1,
         )
+        
         image_subscriber = message_filters.Subscriber(
             self,
             Image,
@@ -181,6 +182,5 @@ def main(args=None):
     node = StepDetectorNode()
     try:
         rclpy.spin(node)
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    except KeyboardInterrupt:
+        pass
