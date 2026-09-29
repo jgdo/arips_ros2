@@ -1,5 +1,6 @@
 import json
 import multiprocessing
+from multiprocessing import reduction
 import os
 import signal
 import threading
@@ -169,8 +170,11 @@ class ComponentManagerNode(Node):
     # ── Launch helpers ──────────────────────────────────────────────
 
     @staticmethod
-    def _run_launch(package: str, launch_file: str, log_write_fd: int) -> None:
+    def _run_launch(package: str, launch_file: str, log_write_fd) -> None:
         """Entry point for the child process. Runs a LaunchService."""
+        if not isinstance(log_write_fd, int):
+            log_write_fd = log_write_fd.detach()
+
         # New session/process group so the whole subprocess tree (including
         # nodes launch spawns) can be signaled together via os.killpg.
         os.setsid()
@@ -212,9 +216,14 @@ class ComponentManagerNode(Node):
         state.pending_cascade = None
 
         read_fd, write_fd = os.openpty()
-        proc = multiprocessing.Process(
+        mp_context = multiprocessing.get_context()
+        child_log_write_fd = write_fd
+        if mp_context.get_start_method() != 'fork':
+            child_log_write_fd = reduction.DupFd(write_fd)
+
+        proc = mp_context.Process(
             target=self._run_launch,
-            args=(cfg.package, cfg.file, write_fd),
+            args=(cfg.package, cfg.file, child_log_write_fd),
             name=f'launch-{name}',
             daemon=True,
         )
@@ -261,7 +270,7 @@ class ComponentManagerNode(Node):
             else:
                 state.state = ComponentsState.FAILURE
                 state.started_by.clear()
-                self.get_logger().warn(
+                self.get_logger().warning(
                     f'Component "{name}" exited unexpectedly')
                 self._propagate_failure(name)
 

@@ -14,7 +14,7 @@
   <depend>rclcpp</depend>
   <depend>rviz_common</depend>
   <depend>rviz_rendering</depend>
-  <build_depend>qtbase5-dev</build_depend>
+  <build_depend>qt6-base-dev</build_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

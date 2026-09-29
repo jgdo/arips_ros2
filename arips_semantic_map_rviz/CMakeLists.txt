@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.20)
 project(arips_semantic_map_rviz)
 
 if(NOT CMAKE_CXX_STANDARD)
@@ -10,7 +10,7 @@ set(CMAKE_AUTOMOC ON)
 find_package(ament_cmake REQUIRED)
 find_package(arips_semantic_map_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
-find_package(Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(rclcpp REQUIRED)
 find_package(rviz_common REQUIRED)
 find_package(rviz_rendering REQUIRED)
@@ -28,15 +28,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME}
-  Qt5::Widgets
-)
-
-ament_target_dependencies(${PROJECT_NAME}
-  arips_semantic_map_msgs
-  pluginlib
-  rclcpp
-  rviz_common
-  rviz_rendering
+  PUBLIC
+  Qt6::Widgets
+  arips_semantic_map_msgs::arips_semantic_map_msgs__rosidl_typesupport_cpp
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  rviz_common::rviz_common
+  rviz_rendering::rviz_rendering
 )
 
 pluginlib_export_plugin_description_file(rviz_common plugin_description.xml)

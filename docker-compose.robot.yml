@@ -11,8 +11,6 @@ services:
       - /dev:/dev
     group_add:
       - dialout
-    environment:
-      PYTHONPYCACHEPREFIX: "$HOME/.cache/pycache/"
     privileged: true
     network_mode: host
     ipc: host

@@ -94,14 +94,14 @@ finally:
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['feetech_joint_state_broadcaster'],
+            arguments=['feetech_joint_state_broadcaster', '-p', controllers_file],
             output='screen',
         ),
 
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['arm_forward_position_controller'],
+            arguments=['arm_forward_position_controller', '-p', controllers_file],
             condition=IfCondition(arm_enabled),
             output='screen',
         ),
@@ -109,7 +109,7 @@ finally:
         Node(
             package='controller_manager',
             executable='spawner',
-            arguments=['kinect_forward_position_controller'],
+            arguments=['kinect_forward_position_controller', '-p', controllers_file],
             condition=IfCondition(kinect_enabled),
             output='screen',
         ),

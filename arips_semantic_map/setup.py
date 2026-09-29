@@ -15,7 +15,6 @@ setup(
         ('share/' + package_name + '/maps', glob('maps/*')),
     ],
     install_requires=['setuptools', 'numpy', 'PyYAML'],
-    tests_require=['pytest'],
     zip_safe=True,
     maintainer='Mark Prediger',
     maintainer_email='markprediger@gmail.com',

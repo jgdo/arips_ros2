@@ -7,7 +7,7 @@ services:
       args:
         - USER_ID=${UID}
     volumes:
-      - .:/home/rosuser/colcon_ws/src/arips_ros2
+      - ../../:/home/rosuser/colcon_ws/
       - /dev:/dev
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/home/rosuser/.Xauthority

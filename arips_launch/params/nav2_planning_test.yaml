@@ -11,6 +11,7 @@ bt_navigator:
     navigate_through_poses:
       plugin: nav2_bt_navigator::NavigateThroughPosesNavigator
     default_nav_to_pose_bt_xml: $(find-pkg-share arips_launch)/behavior_trees/navigate_on_route_graph_w_recovery.xml
+    #default_nav_to_pose_bt_xml: $(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml
     default_nav_through_poses_bt_xml: $(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml
 
 controller_server:
@@ -239,7 +240,7 @@ global_costmap:
       plugins: ['static_layer', 'obstacle_layer', 'inflation_layer']
       static_layer:
         plugin: nav2_costmap_2d::StaticLayer
-        map_topic: /corrected_map
+        map_topic: /map
         map_subscribe_transient_local: true
       obstacle_layer:
         plugin: nav2_costmap_2d::ObstacleLayer

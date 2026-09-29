@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=jazzy
+ARG ROS_DISTRO=lyrical
 
 FROM ros:${ROS_DISTRO} AS base
 
@@ -45,6 +45,7 @@ RUN apt-get update && apt-get upgrade -y \
         ros-${ROS_DISTRO}-ros2controlcli \
         ros-${ROS_DISTRO}-joint-trajectory-controller \
         ros-${ROS_DISTRO}-nav2-loopback-sim \
+        ros-${ROS_DISTRO}-image-transport-plugins \
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash
@@ -52,7 +53,7 @@ RUN echo "source $SETUP_BASH" >> /home/$USERNAME/.bashrc
 RUN echo "export PATH=\$PATH:/home/$USERNAME/.local/bin" >> /home/$USERNAME/.bashrc
 RUN echo "if [ -f /home/$USERNAME/colcon_ws/install/setup.bash ]; then source /home/$USERNAME/colcon_ws/install/setup.bash; fi" >> /home/$USERNAME/.bashrc
 
-ENV PYTHONPYCACHEPREFIX=/home/$USERNAME/.pycache
+ENV PYTHONPYCACHEPREFIX=/home/$USERNAME/.cache/pycache
 
 
 # ── dev stage ──────────────────────────────────────────────
@@ -72,8 +73,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 USER $USERNAME
 # setup ROS2 workspace
-RUN mkdir -p /home/$USERNAME/colcon_ws/src
-COPY --chown=$USERNAME:$USERNAME .colcon_defaults.yaml /home/$USERNAME/colcon_ws/colcon_defaults.yaml
+#RUN mkdir -p /home/$USERNAME/colcon_ws/src
+#COPY --chown=$USERNAME:$USERNAME .colcon_defaults.yaml /home/$USERNAME/colcon_ws/colcon_defaults.yaml
 
 WORKDIR /home/$USERNAME/colcon_ws
 

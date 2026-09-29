@@ -2,7 +2,11 @@ from os.path import join
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import LifecycleNode, Node
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
@@ -37,6 +41,16 @@ def generate_launch_description():
         ],
     )
 
+    route_graph_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('arips_route_graph'),
+                'launch',
+                'route_graph.launch.py',
+            ])
+        )
+    )
+
     return LaunchDescription([
         Node(
             package='arips_semantic_map',
@@ -45,6 +59,8 @@ def generate_launch_description():
             output='screen',
             parameters=[{'map_file': semantic_map_file}],
         ),
+        
         map_server,
         lifecycle_manager,
+        route_graph_launch,
     ])
