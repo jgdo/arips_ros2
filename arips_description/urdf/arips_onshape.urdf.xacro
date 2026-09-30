@@ -15,7 +15,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Base_lower.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Base_lower.stl" scale="1 1 1" />
             </geometry>
             <material name="0.756863_0.462745_0.109804_0.000000_0.000000">
                 <color rgba="0.756863 0.462745 0.109804 1" />
@@ -31,7 +31,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Base_upper.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Base_upper.stl" scale="1 1 1" />
             </geometry>
             <material name="0.756863_0.462745_0.109804_0.000000_0.000000">
                 <color rgba="0.756863 0.462745 0.109804 1" />
@@ -47,7 +47,7 @@
         <visual>
             <origin xyz="0.07 -0.01 -0.456" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Gripper.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Gripper.stl" scale="1 1 1" />
             </geometry>
             <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
                 <color rgba="0.647059 0.647059 0.647059 1" />
@@ -63,7 +63,7 @@
         <visual>
             <origin xyz="0 0.1725 -1.442" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Kinect_beam.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Kinect_beam.stl" scale="1 1 1" />
             </geometry>
             <material name="0.341176_0.776471_0.741176_0.000000_0.000000">
                 <color rgba="0.341176 0.776471 0.741176 0.1" />
@@ -79,7 +79,7 @@
         <visual>
             <origin xyz="-0.01 0.14 -1.392" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/kinect_mount.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/kinect_mount.stl" scale="1 1 1" />
             </geometry>
             <material name="0.156863_0.156863_0.156863_0.000000_0.000000">
                 <color rgba="0.156863 0.156863 0.156863 1" />
@@ -95,7 +95,7 @@
         <visual>
             <origin xyz="0 -0.00848802 -0.201" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Laptop.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Laptop.stl" scale="1 1 1" />
             </geometry>
             <material name="0.156863_0.156863_0.156863_0.000000_0.000000">
                 <color rgba="0.156863 0.156863 0.156863 1" />
@@ -111,7 +111,7 @@
         <visual>
             <origin xyz="-0.125 0.13 -0.676" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link_0.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_0.stl" scale="1 1 1" />
             </geometry>
             <material name="0.498039_0.498039_0.498039_0.000000_0.000000">
                 <color rgba="0.498039 0.498039 0.498039 1" />
@@ -127,7 +127,7 @@
         <visual>
             <origin xyz="-0.1 0.14 -0.676" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link_1.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_1.stl" scale="1 1 1" />
             </geometry>
             <material name="0.980392_0.713725_0.003922_0.000000_0.000000">
                 <color rgba="0.980392 0.713726 0.00392157 1" />
@@ -143,7 +143,7 @@
         <visual>
             <origin xyz="0.07 0.14 -0.666" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link_2.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_2.stl" scale="1 1 1" />
             </geometry>
             <material name="0.615686_0.811765_0.929412_0.000000_0.000000">
                 <color rgba="0.615686 0.811765 0.929412 1" />
@@ -159,7 +159,7 @@
         <visual>
             <origin xyz="0.07 -0.01 -0.656" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Link_3.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Link_3.stl" scale="1 1 1" />
             </geometry>
             <material name="0.647059_0.647059_0.647059_0.000000_0.000000">
                 <color rgba="0.647059 0.647059 0.647059 1" />
@@ -176,7 +176,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Wheel_left.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Wheel_left.stl" scale="1 1 1" />
             </geometry>
             <material name="0.141176_0.694118_0.650980_0.000000_0.000000">
                 <color rgba="0.141176 0.694118 0.65098 1" />
@@ -192,7 +192,7 @@
         <visual>
             <origin xyz="0 0 0" rpy="0 -0 0" />
             <geometry>
-                <mesh filename="package://arips_description/meshes/Wheel_right.gltf" scale="1 1 1" />
+                <mesh filename="package://arips_description/meshes/Wheel_right.stl" scale="1 1 1" />
             </geometry>
             <material name="0.141176_0.694118_0.650980_0.000000_0.000000">
                 <color rgba="0.141176 0.694118 0.65098 1" />

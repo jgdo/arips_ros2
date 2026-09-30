@@ -11,17 +11,22 @@ services:
       - /dev:/dev
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/home/rosuser/.Xauthority
+      - ${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}:/tmp/${WAYLAND_DISPLAY}:ro
     group_add:
       - dialout
     devices:
       - /dev/dri:/dev/dri
     environment:
       DISPLAY: $DISPLAY
+      XAUTHORITY: /tmp/.Xauthority
+      WAYLAND_DISPLAY: $WAYLAND_DISPLAY
     deploy:
       resources:
         reservations:
           devices:
-            - capabilities: [gpu]
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     privileged: true
     network_mode: host
     ipc: host
