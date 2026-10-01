@@ -1,0 +1,4 @@
+geometry_msgs/PoseStamped start_pose
+geometry_msgs/PoseStamped end_pose
+string segment_type
+string metadata_json

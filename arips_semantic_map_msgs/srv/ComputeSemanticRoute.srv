@@ -1,0 +1,11 @@
+geometry_msgs/PoseStamped start_pose
+geometry_msgs/PoseStamped goal_pose
+---
+int32 SUCCESS=0
+int32 START_NOT_FOUND=1
+int32 GOAL_NOT_FOUND=2
+int32 NO_ROUTE_FOUND=3
+int32 UNKNOWN_ERROR=4
+SemanticRoute semantic_route
+string error_msg
+int32 error_code

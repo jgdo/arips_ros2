@@ -196,8 +196,8 @@ def build_route_graph(
         for first, second in combinations(entries, 2):
             if first[1] == second[1]:
                 continue
-            add_edge(first[2], second[2], 'segment', segment_index)
-            add_edge(second[2], first[2], 'segment', segment_index)
+            add_edge(first[2], second[2], 'room', segment_index)
+            add_edge(second[2], first[2], 'room', segment_index)
 
     segment_points = {
         segment_index: [

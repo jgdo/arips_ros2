@@ -5,11 +5,21 @@ from typing import Iterable, Optional, Sequence, Tuple
 from arips_route_graph.route_graph import (
     build_route_graph,
     make_route_graph_marker_array,
+    point_to_segment_index,
+    RouteGraph,
     write_route_graph_geojson,
 )
-from arips_semantic_map_msgs.msg import SemanticMap
+from arips_route_graph.semantic_planning import (
+    format_route_summary,
+    plan_semantic_route,
+    semantic_route_to_path,
+    SUCCESS,
+    UNKNOWN_ERROR,
+)
+from arips_semantic_map_msgs.msg import SemanticMap, SemanticRoute
+from arips_semantic_map_msgs.srv import ComputeSemanticRoute
 from geometry_msgs.msg import Point, Quaternion
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import OccupancyGrid, Path
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -270,6 +280,7 @@ class RouteGraphGenerator(Node):
         self.declare_parameter('minimum_segment_size', 500)
         self.declare_parameter('marker_height', 0.002)
         self.declare_parameter('door_approach_distance', 0.5)
+        self.declare_parameter('door_edge_cost', 3.0)
         self.declare_parameter('geojson_path', '/tmp/arips_route_graph.geojson')
         self.declare_parameter(
             'route_graph_marker_topic', '/route_graph_markers'
@@ -293,6 +304,9 @@ class RouteGraphGenerator(Node):
         self._door_approach_distance = float(
             self.get_parameter('door_approach_distance').value
         )
+        self._door_edge_cost = float(
+            self.get_parameter('door_edge_cost').value
+        )
         self._geojson_path = str(self.get_parameter('geojson_path').value)
         self._route_graph_node_diameter = float(
             self.get_parameter('route_graph_node_diameter').value
@@ -302,6 +316,8 @@ class RouteGraphGenerator(Node):
         )
         self._grid_map: Optional[OccupancyGrid] = None
         self._semantic_map: Optional[SemanticMap] = None
+        self._route_graph: Optional[RouteGraph] = None
+        self._segmentation: Optional[np.ndarray] = None
         self._corrected_map_publisher = self.create_publisher(
             OccupancyGrid, corrected_map_topic, qos
         )
@@ -310,6 +326,9 @@ class RouteGraphGenerator(Node):
         )
         self._route_graph_marker_publisher = self.create_publisher(
             MarkerArray, route_graph_marker_topic, qos
+        )
+        self._semantic_route_path_publisher = self.create_publisher(
+            Path, '~/semantic_route_path', 10
         )
         self.create_subscription(
             OccupancyGrid, map_topic, self._grid_map_callback, qos
@@ -320,6 +339,51 @@ class RouteGraphGenerator(Node):
             self._semantic_map_callback,
             qos,
         )
+        self.create_service(
+            ComputeSemanticRoute,
+            '/compute_semantic_route',
+            self._compute_semantic_route,
+        )
+
+    def _compute_semantic_route(
+        self,
+        request: ComputeSemanticRoute.Request,
+        response: ComputeSemanticRoute.Response,
+    ) -> ComputeSemanticRoute.Response:
+        if (
+            self._grid_map is None
+            or self._route_graph is None
+            or self._segmentation is None
+        ):
+            response.semantic_route = SemanticRoute()
+            response.error_code = UNKNOWN_ERROR
+            response.error_msg = 'Semantic route graph is not ready'
+            return response
+
+        response = plan_semantic_route(
+            request.start_pose,
+            request.goal_pose,
+            self._route_graph,
+            self._grid_map,
+            self._segmentation,
+            self._door_edge_cost,
+        )
+        if response.error_code == SUCCESS:
+            start_segment = point_to_segment_index(
+                self._grid_map,
+                self._segmentation,
+                (
+                    request.start_pose.pose.position.x,
+                    request.start_pose.pose.position.y,
+                ),
+            )
+            self.get_logger().info(
+                format_route_summary(response.semantic_route, start_segment)
+            )
+            self._semantic_route_path_publisher.publish(
+                semantic_route_to_path(response.semantic_route)
+            )
+        return response
 
     def _grid_map_callback(self, message: OccupancyGrid) -> None:
         self.get_logger().info('Received new grid map.')
@@ -332,6 +396,8 @@ class RouteGraphGenerator(Node):
         self._rebuild()
 
     def _rebuild(self) -> None:
+        self._route_graph = None
+        self._segmentation = None
         if self._grid_map is None:
             return
 
@@ -383,6 +449,8 @@ class RouteGraphGenerator(Node):
             labels,
             self._door_approach_distance,
         )
+        self._route_graph = graph
+        self._segmentation = labels
         for door_index in graph.skipped_door_indices:
             self.get_logger().warning(
                 f'Skipping degenerate door {door_index} in route graph.'

@@ -81,7 +81,7 @@ def test_build_route_graph_adds_one_door_edge_and_cross_door_segment_edges():
     ]
     assert len(graph.edges) == 12
     assert sum(edge.kind == 'door' for edge in graph.edges) == 4
-    assert sum(edge.kind == 'segment' for edge in graph.edges) == 8
+    assert sum(edge.kind == 'room' for edge in graph.edges) == 8
     assert len(graph.segment_points[1]) == 4
 
 
