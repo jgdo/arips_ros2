@@ -1,18 +1,24 @@
 <root BTCPP_format="4" main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
     <Sequence name="ComputeRouteAndCount">
-      <ComputeRoute
+      <GetCurrentPose
+        current_pose="{current_pose}" />
+
+      <ComputeSemanticRoute
+        start="{current_pose}"
         goal="{goal}"
-        route="{route}"
-        use_poses="true"
-        use_start="false"
+        semantic_route="{semantic_route}"
+        server_timeout="1000"
         error_code_id="{compute_route_error_code}" />
       
       <Inverter>
         <KeepRunningUntilFailure>
           <Sequence>
-            <PopNextEdge
-             route="{route}"
+            <PopNextSemanticRouteSegment
+             semantic_route="{semantic_route}"
+             next_goal="{next_goal}"
+             segment_type="{segment_type}"
+             metadata_json="{metadata_json}"
             />
           </Sequence>
         </KeepRunningUntilFailure>

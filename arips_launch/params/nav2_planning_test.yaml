@@ -11,7 +11,7 @@ bt_navigator:
     navigate_through_poses:
       plugin: nav2_bt_navigator::NavigateThroughPosesNavigator
     default_nav_to_pose_bt_xml: $(find-pkg-share arips_launch)/behavior_trees/experimental_behavior.xml
-    plugin_lib_names: ['arips_nav2_bt_plugins_route_counter', 'arips_nav2_bt_plugins_pop_next_edge']
+    plugin_lib_names: ['arips_nav2_bt_plugins_route_counter', 'arips_nav2_bt_plugins_compute_semantic_route', 'arips_nav2_bt_plugins_pop_next_semantic_route_segment']
     #default_nav_to_pose_bt_xml: $(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml
     default_nav_through_poses_bt_xml: $(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml
 

@@ -8,8 +8,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
 find_package(behaviortree_cpp REQUIRED)
+find_package(arips_semantic_map_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav2_behavior_tree REQUIRED)
 find_package(nav2_msgs REQUIRED)
+find_package(nav2_ros_common REQUIRED)
 find_package(rclcpp REQUIRED)
 
 function(add_bt_plugin target source)
@@ -29,12 +32,27 @@ function(add_bt_plugin target source)
 endfunction()
 
 add_bt_plugin(arips_nav2_bt_plugins_route_counter src/route_counter.cpp)
-add_bt_plugin(arips_nav2_bt_plugins_pop_next_edge src/pop_next_edge.cpp)
+add_bt_plugin(arips_nav2_bt_plugins_compute_semantic_route src/compute_semantic_route.cpp)
+target_link_libraries(
+  arips_nav2_bt_plugins_compute_semantic_route
+  PUBLIC
+    arips_semantic_map_msgs::arips_semantic_map_msgs__rosidl_typesupport_cpp
+    nav2_ros_common::nav2_ros_common)
+target_link_libraries(
+  arips_nav2_bt_plugins_compute_semantic_route
+  PUBLIC nav2_behavior_tree::nav2_behavior_tree)
+add_bt_plugin(
+  arips_nav2_bt_plugins_pop_next_semantic_route_segment
+  src/pop_next_semantic_route_segment.cpp)
+target_link_libraries(
+  arips_nav2_bt_plugins_pop_next_semantic_route_segment
+  PUBLIC arips_semantic_map_msgs::arips_semantic_map_msgs__rosidl_typesupport_cpp)
 
 install(
   TARGETS
     arips_nav2_bt_plugins_route_counter
-    arips_nav2_bt_plugins_pop_next_edge
+    arips_nav2_bt_plugins_compute_semantic_route
+    arips_nav2_bt_plugins_pop_next_semantic_route_segment
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -45,5 +63,5 @@ install(
   DESTINATION include
 )
 
-ament_export_dependencies(behaviortree_cpp geometry_msgs nav2_msgs rclcpp)
+ament_export_dependencies(behaviortree_cpp arips_semantic_map_msgs geometry_msgs nav2_behavior_tree nav2_msgs nav2_ros_common rclcpp)
 ament_package()

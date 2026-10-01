@@ -33,6 +33,9 @@ RUN apt-get update && apt-get upgrade -y \
         ssh \
         psmisc \
         rsync \
+        nano \
+        ripgrep \
+        mesa-utils \
         ros-${ROS_DISTRO}-rosbridge-suite \
         ros-${ROS_DISTRO}-moveit \
         ros-${ROS_DISTRO}-joint-state-publisher \
