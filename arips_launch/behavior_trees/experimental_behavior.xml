@@ -1,0 +1,22 @@
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <Sequence name="ComputeRouteAndCount">
+      <ComputeRoute
+        goal="{goal}"
+        route="{route}"
+        use_poses="true"
+        use_start="false"
+        error_code_id="{compute_route_error_code}" />
+      
+      <Inverter>
+        <KeepRunningUntilFailure>
+          <Sequence>
+            <PopNextEdge
+             route="{route}"
+            />
+          </Sequence>
+        </KeepRunningUntilFailure>
+      </Inverter>
+    </Sequence>
+  </BehaviorTree>
+</root>

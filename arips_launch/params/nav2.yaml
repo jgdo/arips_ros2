@@ -285,6 +285,7 @@ route_server:
     boundary_radius_to_achieve_node: 1.0
     radius_to_achieve_node: 2.0
     smooth_corners: true
+    graph_filepath: "/tmp/arips_route_graph.geojson"
     operations: ['AdjustSpeedLimit', 'ReroutingService', 'CollisionMonitor']
     ReroutingService:
       plugin: nav2_route::ReroutingService

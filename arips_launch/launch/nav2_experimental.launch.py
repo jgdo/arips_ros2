@@ -12,6 +12,7 @@ def generate_launch_description():
     package_share = get_package_share_directory('arips_launch')
 
     params_file = LaunchConfiguration('params_file')
+    graph = LaunchConfiguration('graph')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
     use_respawn = LaunchConfiguration('use_respawn')
@@ -20,6 +21,10 @@ def generate_launch_description():
         'params_file',
         default_value=os.path.join(package_share, 'params', 'nav2_planning_test.yaml'),
         description='Full path to the Nav2 parameters file.')
+    declare_graph = DeclareLaunchArgument(
+        'graph',
+        default_value='/tmp/arips_route_graph.geojson',
+        description='Path to the route graph file.')
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time',
         default_value='true',
@@ -43,52 +48,18 @@ def generate_launch_description():
         ),
         launch_arguments={
             'params_file': params_file,
+            'graph': graph,
             'use_sim_time': use_sim_time,
             'autostart': autostart,
             'use_respawn': use_respawn,
         }.items(),
     )
 
-    loopback_simulation_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare('nav2_loopback_sim'),
-                'loopback_simulation.launch.py',
-            ])
-        ),
-        launch_arguments={
-            'params_file': params_file,
-            'scan_frame_id': 'arips_wheel_center',
-        }.items(),
-    )
-
-    static_publisher_cmd = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        output='screen',
-        arguments=[
-            '--x', '0.0', '--y', '0.0', '--z', '0.0',
-            '--roll', '0', '--pitch', '0', '--yaw', '0',
-            '--frame-id', 'base_footprint', '--child-frame-id', 'arips_wheel_center']
-    )
-
-    static_map_to_odom_publisher_cmd = Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            output='screen',
-            arguments=[
-                '--x', '0.0', '--y', '0.0', '--z', '0.0',
-                '--roll', '0', '--pitch', '0', '--yaw', '0',
-                '--frame-id', 'map', '--child-frame-id', 'odom']
-        )
-
     return LaunchDescription([
         declare_params_file,
+        declare_graph,
         declare_use_sim_time,
         declare_autostart,
         declare_use_respawn,
-        loopback_simulation_launch,
         navigation_launch,
-        static_publisher_cmd,
-        static_map_to_odom_publisher_cmd,
     ])
