@@ -1,4 +1,5 @@
 import json
+import math
 
 from arips_route_graph.route_graph import RouteEdge, RouteGraph, RouteNode
 from arips_route_graph.semantic_planning import (
@@ -32,10 +33,10 @@ def _pose(x, frame_id='map'):
     return pose
 
 
-def _node(node_id, x, segment_index, door_index=-1):
+def _node(node_id, x, segment_index, door_index=-1, y=0.5):
     return RouteNode(
         node_id=node_id,
-        coordinate=(x, 0.5),
+        coordinate=(x, y),
         door_index=door_index,
         side='',
         segment_index=segment_index,
@@ -120,12 +121,16 @@ def test_cross_segment_route_serializes_room_and_door_edges():
     graph = _graph(
         [
             _node('door_4_A', 1.5, 1, door_index=4),
-            _node('door_4_B', 3.5, 2, door_index=4),
+            _node('door_4_B', 3.5, 2, door_index=4, y=2.5),
         ],
         [_edge('door_edge', 'door_4_A', 'door_4_B', 'door')],
     )
     start = _pose(0.1)
+    start.pose.orientation.z = 0.25
+    start.pose.orientation.w = 0.9682458365518543
     goal = _pose(4.1)
+    goal.pose.orientation.z = -0.3
+    goal.pose.orientation.w = 0.9539392014169457
 
     response = plan_semantic_route(
         start,
@@ -146,13 +151,20 @@ def test_cross_segment_route_serializes_room_and_door_edges():
     assert segments[0].start_pose == start
     assert segments[-1].end_pose == goal
     assert segments[0].end_pose.header.frame_id == 'map'
-    assert segments[0].end_pose.pose.orientation.w == 1.0
+    expected_yaw = math.atan2(2.0, 2.0)
+    expected_z = math.sin(expected_yaw * 0.5)
+    expected_w = math.cos(expected_yaw * 0.5)
+    assert segments[0].end_pose.pose.orientation.z == expected_z
+    assert segments[0].end_pose.pose.orientation.w == expected_w
+    assert segments[1].start_pose == segments[0].end_pose
+    assert segments[1].end_pose.pose.orientation.z == expected_z
+    assert segments[1].end_pose.pose.orientation.w == expected_w
     assert format_route_summary(response.semantic_route, 1) == (
         'Computed semantic route with 3 segments: [room_1, door_4, room_2]'
     )
     assert graph.nodes == [
         _node('door_4_A', 1.5, 1, door_index=4),
-        _node('door_4_B', 3.5, 2, door_index=4),
+        _node('door_4_B', 3.5, 2, door_index=4, y=2.5),
     ]
 
 

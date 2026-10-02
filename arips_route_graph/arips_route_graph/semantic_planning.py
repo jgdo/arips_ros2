@@ -85,6 +85,19 @@ def _node_pose(node: RouteNode, grid_map: OccupancyGrid) -> PoseStamped:
     return pose
 
 
+def _orient_pose_towards(
+    pose: PoseStamped, from_node: RouteNode, to_node: RouteNode
+) -> None:
+    yaw = math.atan2(
+        to_node.coordinate[1] - from_node.coordinate[1],
+        to_node.coordinate[0] - from_node.coordinate[0],
+    )
+    pose.pose.orientation.x = 0.0
+    pose.pose.orientation.y = 0.0
+    pose.pose.orientation.z = math.sin(yaw * 0.5)
+    pose.pose.orientation.w = math.cos(yaw * 0.5)
+
+
 def _edge_costs(
     graph: RouteGraph, door_edge_cost: float
 ) -> Tuple[Dict[str, RouteNode], Dict[str, List[Tuple[RouteEdge, float]]]]:
@@ -157,18 +170,39 @@ def _route_segments(
     goal_node_id: str,
 ) -> SemanticRoute:
     semantic_route = SemanticRoute()
-    for edge in path:
+    previous_end_pose: Optional[PoseStamped] = None
+    for edge_index, edge in enumerate(path):
         segment = Segment()
-        segment.start_pose = (
-            deepcopy(start_pose)
-            if edge.from_node == start_node_id
-            else _node_pose(node_by_id[edge.from_node], grid_map)
-        )
+        if edge.from_node == start_node_id:
+            segment.start_pose = deepcopy(start_pose)
+        elif previous_end_pose is not None:
+            segment.start_pose = deepcopy(previous_end_pose)
+        else:
+            segment.start_pose = _node_pose(
+                node_by_id[edge.from_node], grid_map
+            )
         segment.end_pose = (
             deepcopy(goal_pose)
             if edge.to_node == goal_node_id
             else _node_pose(node_by_id[edge.to_node], grid_map)
         )
+        if edge.to_node != goal_node_id:
+            if edge.kind == 'door':
+                _orient_pose_towards(
+                    segment.end_pose,
+                    node_by_id[edge.from_node],
+                    node_by_id[edge.to_node],
+                )
+            elif (
+                edge_index + 1 < len(path)
+                and path[edge_index + 1].kind == 'door'
+            ):
+                next_door = path[edge_index + 1]
+                _orient_pose_towards(
+                    segment.end_pose,
+                    node_by_id[edge.to_node],
+                    node_by_id[next_door.to_node],
+                )
         segment.segment_type = edge.kind
         if edge.kind == 'room':
             if edge.segment_index is None:
@@ -183,6 +217,7 @@ def _route_segments(
                 raise ValueError(f'Door edge {edge.edge_id} has invalid door nodes')
             segment.metadata_json = json.dumps({'door_id': from_door})
         semantic_route.segments.append(segment)
+        previous_end_pose = segment.end_pose
     return semantic_route
 
 

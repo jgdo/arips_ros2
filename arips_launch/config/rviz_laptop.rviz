@@ -8,6 +8,7 @@ Panels:
       Expanded:
         - /TF1/Frames1
         - /RobotModel1/Mass Properties1
+        - /Plan global1
         - /Plan global1/Offset1
         - /Path1/Offset1
         - /Trajectories1/Topic1
@@ -18,13 +19,14 @@ Panels:
         - /Route Graph1/Topic1
         - /Route Graph1/Namespaces1
         - //route_server graph1/Namespaces1
-        - /Path3/Offset1
+        - /Path3/Topic1
       Splitter Ratio: 0.5588235259056091
     Tree Height: 168
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
     Expanded:
+      - /2D Goal Pose1
       - /2D Goal Pose1/Topic1
       - /Publish Point1
     Name: Tool Properties
@@ -283,12 +285,12 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 255; 0; 0
+      Color: 0; 255; 127
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
-      Line Style: Billboards
+      Line Style: Lines
       Line Width: 0.029999999329447746
       Name: Plan global
       Offset:
@@ -434,7 +436,6 @@ Visualization Manager:
         Value: /kinect/depth/image_raw
       Value: false
       Visibility:
-        "": true
         /route_server graph: true
         Corrected Map: true
         DepthCloud: true
@@ -461,13 +462,13 @@ Visualization Manager:
       Zoom Factor: 1
     - Class: rviz_default_plugins/InteractiveMarkers
       Enable Transparency: true
-      Enabled: false
+      Enabled: true
       Interactive Markers Namespace: /semantic_map_markers
       Name: Semantic Map
       Show Axes: false
       Show Descriptions: true
       Show Visual Aids: false
-      Value: false
+      Value: true
     - Alpha: 0.30000001192092896
       Binary representation: false
       Binary threshold: 100
@@ -503,19 +504,16 @@ Visualization Manager:
         Value: /map_segmentation
       Value: false
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
+      Enabled: false
       Name: Route Graph
-      Namespaces:
-        Value: true
-        route_graph_edges: true
-        route_graph_nodes: true
+      Namespaces: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /route_graph_markers
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/MarkerArray
       Enabled: false
       Name: /route_server graph
@@ -530,7 +528,7 @@ Visualization Manager:
     - Alpha: 1
       Class: rviz_default_plugins/Polygon
       Color: 25; 255; 0
-      Enabled: true
+      Enabled: false
       Name: door_step
       Topic:
         Depth: 5
@@ -539,7 +537,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /door_step_polygon
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Image
       Enabled: false
       Max Value: 1
@@ -555,23 +553,23 @@ Visualization Manager:
         Transport Override: ""
         Value: /kinect/rgb/step_detector_image
       Value: false
-    - Alpha: 1
+    - Alpha: 0.699999988079071
       Buffer Length: 1
       Class: rviz_default_plugins/Path
-      Color: 170; 85; 255
+      Color: 176; 139; 255
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
       Line Style: Billboards
-      Line Width: 0.029999999329447746
+      Line Width: 0.03999999910593033
       Name: Path
       Offset:
         X: 0
         Y: 0
         Z: 0.10000000149011612
       Pose Color: 255; 85; 255
-      Pose Style: None
+      Pose Style: Axes
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
@@ -613,7 +611,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /test_goal
+        Value: /goal_pose
     - Class: rviz_default_plugins/PublishPoint
       Single click: true
       Topic:
@@ -622,6 +620,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /clicked_point
+    - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
   Transformation:
@@ -640,11 +639,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 90.86654663085938
+      Scale: 92.78406524658203
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
-      X: -0.9139940142631531
-      Y: 1.8256773948669434
+      X: -1.389583706855774
+      Y: 1.6550118923187256
     Saved: ~
 Window Geometry:
   Camera:
