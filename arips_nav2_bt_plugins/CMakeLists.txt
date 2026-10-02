@@ -20,10 +20,6 @@ find_package(rclcpp REQUIRED)
 function(add_bt_plugin target source)
   add_library(${target} SHARED ${source})
   target_compile_definitions(${target} PRIVATE BT_PLUGIN_EXPORT)
-  target_include_directories(${target} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
   target_link_libraries(${target}
     PUBLIC
     behaviortree_cpp::behaviortree_cpp
@@ -67,11 +63,6 @@ install(
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
-)
-
-install(
-  DIRECTORY include/
-  DESTINATION include
 )
 
 ament_export_dependencies(arips_action_msgs behaviortree_cpp arips_semantic_map_msgs geometry_msgs nlohmann_json nav2_behavior_tree nav2_msgs nav2_ros_common rclcpp)
