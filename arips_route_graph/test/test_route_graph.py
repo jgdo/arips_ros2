@@ -83,6 +83,9 @@ def test_build_route_graph_adds_one_door_edge_and_cross_door_segment_edges():
     assert sum(edge.kind == 'door' for edge in graph.edges) == 4
     assert sum(edge.kind == 'room' for edge in graph.edges) == 8
     assert len(graph.segment_points[1]) == 4
+    assert graph.door_properties[0].pivot == (1.0, 1.0)
+    assert graph.door_properties[0].extent == (3.0, 1.0)
+    assert graph.door_properties[0].open_angle_deg == 90.0
 
 
 def test_build_route_graph_ignores_segment_zero_for_cross_door_edges():

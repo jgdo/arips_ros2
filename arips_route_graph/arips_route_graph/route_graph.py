@@ -38,10 +38,18 @@ class RouteEdge:
     segment_index: Optional[int] = None
 
 
+@dataclass(frozen=True)
+class RouteDoor:
+    pivot: Coordinate
+    extent: Coordinate
+    open_angle_deg: float
+
+
 @dataclass
 class RouteGraph:
     nodes: List[RouteNode]
     edges: List[RouteEdge]
+    door_properties: Dict[int, RouteDoor]
     segment_points: Dict[int, List[SegmentPoint]]
     skipped_door_indices: List[int]
 
@@ -126,6 +134,7 @@ def build_route_graph(
     nodes: List[RouteNode] = []
     segment_entries: Dict[int, List[Tuple[Coordinate, int, str]]] = {}
     door_nodes: Dict[int, Dict[str, str]] = {}
+    door_properties: Dict[int, RouteDoor] = {}
     skipped_door_indices: List[int] = []
 
     for door_index, door in enumerate(semantic_map.doors):
@@ -136,6 +145,11 @@ def build_route_graph(
             continue
 
         door_nodes[door_index] = {}
+        door_properties[door_index] = RouteDoor(
+            pivot=(door.pivot.x, door.pivot.y),
+            extent=(door.extent.x, door.extent.y),
+            open_angle_deg=door.open_angle_deg,
+        )
         for side, coordinate in zip(('A', 'B'), approach_points):
             node_id = f'door_{door_index}_{side}'
             segment_index = point_to_segment_index(
@@ -209,6 +223,7 @@ def build_route_graph(
     return RouteGraph(
         nodes=nodes,
         edges=edges,
+        door_properties=door_properties,
         segment_points=segment_points,
         skipped_door_indices=skipped_door_indices,
     )

@@ -1,7 +1,7 @@
 import json
 import math
 
-from arips_route_graph.route_graph import RouteEdge, RouteGraph, RouteNode
+from arips_route_graph.route_graph import RouteDoor, RouteEdge, RouteGraph, RouteNode
 from arips_route_graph.semantic_planning import (
     format_route_summary,
     plan_semantic_route,
@@ -53,10 +53,11 @@ def _edge(edge_id, from_node, to_node, kind, segment_index=None):
     )
 
 
-def _graph(nodes, edges):
+def _graph(nodes, edges, door_properties=None):
     return RouteGraph(
         nodes=nodes,
         edges=edges,
+        door_properties=door_properties or {},
         segment_points={},
         skipped_door_indices=[],
     )
@@ -124,6 +125,13 @@ def test_cross_segment_route_serializes_room_and_door_edges():
             _node('door_4_B', 3.5, 2, door_index=4, y=2.5),
         ],
         [_edge('door_edge', 'door_4_A', 'door_4_B', 'door')],
+        {
+            4: RouteDoor(
+                pivot=(1.0, 1.0),
+                extent=(1.0, 2.0),
+                open_angle_deg=90.0,
+            )
+        },
     )
     start = _pose(0.1)
     start.pose.orientation.z = 0.25
@@ -146,7 +154,12 @@ def test_cross_segment_route_serializes_room_and_door_edges():
         'room', 'door', 'room'
     ]
     assert json.loads(segments[0].metadata_json) == {'segment_id': 1}
-    assert json.loads(segments[1].metadata_json) == {'door_id': 4}
+    assert json.loads(segments[1].metadata_json) == {
+        'door_id': 4,
+        'pivot': {'x': 1.0, 'y': 1.0},
+        'extent': {'x': 1.0, 'y': 2.0},
+        'open_angle_deg': 90.0,
+    }
     assert json.loads(segments[2].metadata_json) == {'segment_id': 2}
     assert segments[0].start_pose == start
     assert segments[-1].end_pose == goal
@@ -185,6 +198,11 @@ def test_dijkstra_uses_configured_door_cost():
             _edge('middle_room', 'middle_a', 'middle_b', 'room', 2),
             _edge('second_door', 'middle_b', 'multi_goal', 'door'),
         ],
+        {
+            0: RouteDoor((0.0, 0.0), (0.0, 1.0), 90.0),
+            1: RouteDoor((1.0, 0.0), (1.0, 1.0), 90.0),
+            2: RouteDoor((2.0, 0.0), (2.0, 1.0), 90.0),
+        },
     )
     labels = np.ones((1, 201), dtype=np.uint16)
     labels[0, 2:4] = 2

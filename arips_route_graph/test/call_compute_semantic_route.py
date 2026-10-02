@@ -41,6 +41,8 @@ class ComputeSemanticRouteClient(Node):
         response = future.result()
         if response is not None:
             print(response.error_code)
+            for segment in response.semantic_route.segments:
+                print(segment.metadata_json)
 
 
 def main(args=None):
@@ -50,9 +52,6 @@ def main(args=None):
         client.call_service()
     except KeyboardInterrupt:
         pass
-    finally:
-        client.destroy_node()
-        rclpy.shutdown()
 
 
 if __name__ == '__main__':

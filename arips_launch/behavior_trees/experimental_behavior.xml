@@ -20,8 +20,16 @@
              segment_type="{segment_type}"
              metadata_json="{metadata_json}"
             />
-            <ComputePathToPose goal="{next_goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
-            <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+            <Sequence _skipIf="segment_type != 'room'">
+              <ComputePathToPose goal="{next_goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+              <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+            </Sequence>
+            <CrossDoorStep 
+              _skipIf="segment_type != 'door'" 
+              metadata_json="{metadata_json}" 
+              segment_type="{segment_type}" 
+              error_code_id="{cross_door_error_code}" 
+              error_msg="{cross_door_error_msg}"/>
           </Sequence>
         </KeepRunningUntilFailure>
       </Inverter>

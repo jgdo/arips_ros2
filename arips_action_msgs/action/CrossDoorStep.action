@@ -1,0 +1,8 @@
+arips_semantic_map_msgs/Door door
+---
+int32 SUCCESS=0
+int32 FAILURE=1
+int32 error_code
+string error_str
+---
+float64 distance_left

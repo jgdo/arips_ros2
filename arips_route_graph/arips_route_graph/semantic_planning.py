@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 
 from arips_route_graph.route_graph import (
     point_to_segment_index,
+    RouteDoor,
     RouteEdge,
     RouteGraph,
     RouteNode,
@@ -164,6 +165,7 @@ def _route_segments(
     path: List[RouteEdge],
     node_by_id: Dict[str, RouteNode],
     grid_map: OccupancyGrid,
+    door_properties: Dict[int, RouteDoor],
     start_pose: PoseStamped,
     goal_pose: PoseStamped,
     start_node_id: str,
@@ -215,7 +217,17 @@ def _route_segments(
             to_door = node_by_id[edge.to_node].door_index
             if from_door < 0 or from_door != to_door:
                 raise ValueError(f'Door edge {edge.edge_id} has invalid door nodes')
-            segment.metadata_json = json.dumps({'door_id': from_door})
+            door = door_properties.get(from_door)
+            if door is None:
+                raise ValueError(f'Door edge {edge.edge_id} has no door properties')
+            segment.metadata_json = json.dumps(
+                {
+                    'door_id': from_door,
+                    'pivot': {'x': door.pivot[0], 'y': door.pivot[1]},
+                    'extent': {'x': door.extent[0], 'y': door.extent[1]},
+                    'open_angle_deg': door.open_angle_deg,
+                }
+            )
         semantic_route.segments.append(segment)
         previous_end_pose = segment.end_pose
     return semantic_route
@@ -314,6 +326,7 @@ def plan_semantic_route(
             path,
             node_by_id,
             grid_map,
+            planning_graph.door_properties,
             start_pose,
             goal_pose,
             start_node_id,
