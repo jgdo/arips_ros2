@@ -3,7 +3,7 @@ import time
 
 import rclpy
 from arips_action_msgs.action import CrossDoorStep
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import Twist, TwistStamped
 from rclpy.action import ActionServer
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -24,9 +24,10 @@ class CrossDoorStepServer(Node):
                 ('initial_align_angle_threshold_deg', 5.0),
                 ('initial_align_veclocity', 0.5),
                 ('alignment_p_factor', 3.0),
-                ('door_clearing_distance', 0.35),
+                ('door_clearing_distance', 0.4),
                 ('control_rate_hz', 20.0),
-                ('forward_speed', 0.2),
+                ('forward_speed', 0.1),
+                ('enable_stamped_cmd_vel', False),
             ],
         )
         self._map_frame = self.get_parameter('map_frame').value
@@ -40,6 +41,8 @@ class CrossDoorStepServer(Node):
         control_rate_hz = self.get_parameter('control_rate_hz').value
         self._forward_speed = self.get_parameter('forward_speed').value
         self._initial_align_velocity = self.get_parameter('initial_align_veclocity').value
+        self._use_twist_stamped = self.get_parameter(
+            'enable_stamped_cmd_vel').value
 
         if control_rate_hz <= 0.0:
             raise ValueError('control_rate_hz must be greater than zero')
@@ -47,8 +50,11 @@ class CrossDoorStepServer(Node):
             raise ValueError('door_clearing_distance cannot be negative')
         self._control_period = 1.0 / control_rate_hz
 
-        self._cmd_vel_publisher = self.create_publisher(
-            TwistStamped, '/cmd_vel', 10)
+        command_type = TwistStamped if self._use_twist_stamped else Twist
+        self._cmd_vel_publisher = self.create_publisher(command_type, '/cmd_vel', 10)
+        self.get_logger().info(
+            f'Publishing {"TwistStamped" if self._use_twist_stamped else "Twist"} '
+            'commands on /cmd_vel')
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
         self._action_server = ActionServer(
@@ -123,8 +129,8 @@ class CrossDoorStepServer(Node):
             if abs(alignment_error) < self._initial_align_angle_threshold_rad:
                 break
 
-            command = TwistStamped()
-            command.twist.angular.z = math.copysign(self._initial_align_velocity, alignment_error)
+            command = Twist()
+            command.angular.z = math.copysign(self._initial_align_velocity, alignment_error)
             self._publish_command(command)
             time.sleep(self._control_period)
 
@@ -151,9 +157,9 @@ class CrossDoorStepServer(Node):
 
             alignment_error = self._normalize_angle(line_yaw - current_yaw)
             self.get_logger().info(f'Alignment error: {alignment_error}')
-            command = TwistStamped()
-            command.twist.linear.x = self._forward_speed
-            command.twist.angular.z = (
+            command = Twist()
+            command.linear.x = self._forward_speed
+            command.angular.z = (
                 alignment_error * self._alignment_p_factor)
             self._publish_command(command)
             time.sleep(self._control_period)
@@ -193,12 +199,17 @@ class CrossDoorStepServer(Node):
         goal_handle.publish_feedback(feedback)
 
     def _publish_stop(self):
-        self._publish_command(TwistStamped())
+        self._publish_command(Twist())
 
     def _publish_command(self, command):
-        command.header.stamp = self.get_clock().now().to_msg()
-        command.header.frame_id = self._base_frame
-        self._cmd_vel_publisher.publish(command)
+        if self._use_twist_stamped:
+            stamped_command = TwistStamped()
+            stamped_command.header.stamp = self.get_clock().now().to_msg()
+            stamped_command.header.frame_id = self._base_frame
+            stamped_command.twist = command
+            self._cmd_vel_publisher.publish(stamped_command)
+        else:
+            self._cmd_vel_publisher.publish(command)
 
     def _abort(self, goal_handle, result, error_str):
         self._publish_stop()

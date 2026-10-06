@@ -51,7 +51,7 @@ def generate_launch_description():
             'graph': graph,
             'use_sim_time': use_sim_time,
             'autostart': autostart,
-            'use_respawn': use_respawn,
+            'use_respawn': use_respawn
         }.items(),
     )
 

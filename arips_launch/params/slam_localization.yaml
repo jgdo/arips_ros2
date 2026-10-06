@@ -18,7 +18,7 @@ slam_toolbox:
 
     # map to load for localization
 #    map_file_name: $(find-pkg-share arips_maps)/maps/map_lu_9.9.2026sss
-    map_file_name: /home/jgdo/colcon_ws/src/arips_maps/maps/map_lu_9.9.2026
+    map_file_name: /home/jgdo/colcon_ws/src/arips_maps/maps/lu_5_okt_2026_lyrical
     map_start_at_dock: true
 
     debug_logging: false
