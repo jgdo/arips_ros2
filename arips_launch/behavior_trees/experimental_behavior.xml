@@ -8,7 +8,7 @@
         start="{current_pose}"
         goal="{goal}"
         semantic_route="{semantic_route}"
-        server_timeout="1000"
+        server_timeout="3000"
         error_code_id="{compute_route_error_code}" />
       
       <Inverter>
@@ -21,8 +21,8 @@
              metadata_json="{metadata_json}"
             />
             <Sequence _skipIf="segment_type != 'room'">
-              <ComputePathToPose goal="{next_goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
-              <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+              <ComputePathToPose goal="{next_goal}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+              <FollowPath path="{path}" controller_id="{selected_controller}" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
             </Sequence>
             <CrossDoorStep 
               _skipIf="segment_type != 'door'" 

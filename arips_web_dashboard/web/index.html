@@ -142,6 +142,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 }
 .connected { color: green; }
 .disconnected { color: red; }
+.battery-unknown { color: #888; background: #f2f2f2; border-color: #ddd; }
 /* Kinect tilt control (vertical slider) */
 #kinect-tilt-control {
   position: fixed;
@@ -167,7 +168,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 
 <header id="header">
   <div id="header-left">
-    <div id="battery-status" class="disconnected">Battery: waiting</div>
+    <div id="battery-status" class="battery-unknown">Battery: unknown</div>
   </div>
   <div id="header-center">
     <div id="connection-status" class="disconnected">rosbridge: Disconnected</div>
@@ -230,17 +231,20 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Connected';
     connEl.className = 'connected';
+    setBatteryUnknown();
     fetchComponents();
   });
   ros.on('error', function() {
     connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Error';
     connEl.className = 'disconnected';
+    setBatteryUnknown();
   });
   ros.on('close', function() {
     connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Disconnected';
     connEl.className = 'disconnected';
+    setBatteryUnknown();
   });
   setInterval(function() {
     if (ros.isConnected || connectionAttemptInProgress) {
@@ -262,8 +266,17 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   });
 
   batterySub.subscribe(function(msg) {
+    if (!ros.isConnected) {
+      setBatteryUnknown();
+      return;
+    }
     updateBatteryStatus(msg);
   });
+
+  function setBatteryUnknown() {
+    batteryEl.textContent = 'Battery: unknown';
+    batteryEl.className = 'battery-unknown';
+  }
 
   function updateBatteryStatus(msg) {
     var statusNames = {
@@ -282,7 +295,9 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
       text += ' (' + status + ')';
     }
     batteryEl.textContent = text;
-    batteryEl.className = percentage === null || percentage <= 15 ? 'disconnected' : 'connected';
+    batteryEl.className = percentage === null
+      ? 'battery-unknown'
+      : percentage <= 15 ? 'disconnected' : 'connected';
   }
 
   // ── Component list ───────────────────────────────────────────

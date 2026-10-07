@@ -3,19 +3,33 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, EmitEvent, LogInfo,
-                            RegisterEventHandler, ExecuteProcess)
+                            RegisterEventHandler, ExecuteProcess,
+                            IncludeLaunchDescription)
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.conditions import IfCondition
 from launch.events import matches_action
 from launch.substitutions import (AndSubstitution, LaunchConfiguration,
-                                  NotSubstitution, PythonExpression)
+                                  NotSubstitution, PythonExpression,
+                                  PathJoinSubstitution)
 from launch_ros.actions import LifecycleNode, Node
 from launch_ros.event_handlers import OnStateTransition
 from launch_ros.events.lifecycle import ChangeState
 from lifecycle_msgs.msg import Transition
 from launch_ros.descriptions import ParameterFile
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
+    semantic_map_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('arips_launch'),
+                'launch',
+                'semantic_map.launch.py',
+            ])
+        )
+    )
+
     autostart = LaunchConfiguration('autostart')
     use_lifecycle_manager = LaunchConfiguration("use_lifecycle_manager")
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -98,6 +112,7 @@ def generate_launch_description():
         declare_slam_params_file_cmd,
         declare_bag_file_cmd,
         declare_bag_rate_cmd,
+        semantic_map_launch,
         start_localization_slam_toolbox_node,
         configure_event,
         activate_event,

@@ -19,6 +19,14 @@ components:
     package: kinect_ros2
     file: launch/kinect.launch.py
     dependencies: [base_power]
+  localization:
+    package: arips_launch
+    file: launch/localization.launch.py
+    dependencies: [lidar]
+  full_navigation:
+    package: arips_launch
+    file: launch/nav2.launch.py
+    dependencies: [localization]
   shutdown:
     package: arips_launch
     file: launch/shutdown.launch.py

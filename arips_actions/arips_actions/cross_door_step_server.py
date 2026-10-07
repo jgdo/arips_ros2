@@ -27,7 +27,7 @@ class CrossDoorStepServer(Node):
                 ('door_clearing_distance', 0.4),
                 ('control_rate_hz', 20.0),
                 ('forward_speed', 0.08),
-                ('enable_stamped_cmd_vel', False),
+                ('enable_stamped_cmd_vel', True),
             ],
         )
         self._map_frame = self.get_parameter('map_frame').value
