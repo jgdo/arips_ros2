@@ -82,10 +82,18 @@ Visualization Manager:
           Value: false
         kinect_beam:
           Value: false
+        kinect_depth_frame:
+          Value: true
+        kinect_depth_optical_frame:
+          Value: true
         kinect_link:
           Value: false
         kinect_mount:
           Value: false
+        kinect_rgb_frame:
+          Value: true
+        kinect_rgb_optical_frame:
+          Value: true
         laptop:
           Value: false
         laser_frame:
@@ -113,33 +121,37 @@ Visualization Manager:
       Show Names: false
       Tree:
         map:
-          {}
-        odom:
-          arips_wheel_center:
-            base_footprint:
-              base_link:
-                {}
-              base_lower:
-                base_upper:
-                  kinect_mount:
-                    kinect_beam:
-                      {}
-                    kinect_link:
-                      {}
-                  laptop:
-                    {}
-                  link_0:
-                    link_1:
-                      link_2:
-                        link_3:
-                          gripper:
+          odom:
+            arips_wheel_center:
+              base_footprint:
+                base_link:
+                  {}
+                base_lower:
+                  base_upper:
+                    kinect_mount:
+                      kinect_beam:
+                        {}
+                      kinect_link:
+                        kinect_depth_frame:
+                          kinect_depth_optical_frame:
                             {}
-                wheel_left:
+                        kinect_rgb_frame:
+                          kinect_rgb_optical_frame:
+                            {}
+                    laptop:
+                      {}
+                    link_0:
+                      link_1:
+                        link_2:
+                          link_3:
+                            gripper:
+                              {}
+                  wheel_left:
+                    {}
+                  wheel_right:
+                    {}
+                laser_frame:
                   {}
-                wheel_right:
-                  {}
-              laser_frame:
-                {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -618,7 +630,10 @@ Visualization Manager:
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: Route Graph
-      Namespaces: true
+      Namespaces:
+        Value: true
+        route_graph_edges: true
+        route_graph_nodes: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -767,6 +782,7 @@ Visualization Manager:
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
@@ -783,11 +799,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 86.12762451171875
+      Scale: 88.42288208007812
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
-      X: -0.8281331658363342
-      Y: 2.7196319103240967
+      X: -1.6084725856781006
+      Y: 2.6404662132263184
     Saved: ~
 Window Geometry:
   Camera:

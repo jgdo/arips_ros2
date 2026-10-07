@@ -221,22 +221,39 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   // ── ROS connection ───────────────────────────────────────────
   var wsUrl = 'ws://arips:9090';
   var ros = new ROSLIB.Ros({ url: wsUrl });
+  var reconnectIntervalMs = 500;
+  var connectionAttemptInProgress = true;
 
   var connEl = document.getElementById('connection-status');
   var batteryEl = document.getElementById('battery-status');
   ros.on('connection', function() {
+    connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Connected';
     connEl.className = 'connected';
     fetchComponents();
   });
   ros.on('error', function() {
+    connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Error';
     connEl.className = 'disconnected';
   });
   ros.on('close', function() {
+    connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Disconnected';
     connEl.className = 'disconnected';
   });
+  setInterval(function() {
+    if (ros.isConnected || connectionAttemptInProgress) {
+      return;
+    }
+    connectionAttemptInProgress = true;
+    try {
+      ros.connect(wsUrl);
+    } catch (err) {
+      connectionAttemptInProgress = false;
+      console.error('rosbridge reconnect failed:', err);
+    }
+  }, reconnectIntervalMs);
 
   var batterySub = new ROSLIB.Topic({
     ros: ros,
@@ -601,7 +618,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   var cmdVelPub = new ROSLIB.Topic({
     ros: ros,
     name: '/cmd_vel',
-    messageType: 'geometry_msgs/msg/Twist'
+    messageType: 'geometry_msgs/msg/TwistStamped'
   });
 
   var statusEl = document.getElementById('cmd-vel-status');
@@ -642,9 +659,19 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   }
 
   function publishTwist() {
+    var nowMs = Date.now();
     var twist = new ROSLIB.Message({
-      linear: { x: linearX, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: angularZ }
+      header: {
+        stamp: {
+          sec: Math.floor(nowMs / 1000),
+          nanosec: (nowMs % 1000) * 1000000
+        },
+        frame_id: 'arips_wheel_center'
+      },
+      twist: {
+        linear: { x: linearX, y: 0, z: 0 },
+        angular: { x: 0, y: 0, z: angularZ }
+      }
     });
     cmdVelPub.publish(twist);
   }

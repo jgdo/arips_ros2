@@ -276,6 +276,18 @@ class ComponentManagerNode(Node):
 
             self._publish_state()
 
+    def shutdown_all_components(self, timeout: float = 10.0) -> None:
+        """Stop every running component and wait for the processes to exit."""
+        with self._lock:
+            for name in self._components:
+                self._begin_shutdown(name, ComponentsState.OFF, None)
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            with self._lock:
+                if not any(self._is_alive(s) for s in self._components.values()):
+                    return
+            time.sleep(0.1)
+
     def _begin_shutdown(self, name: str, final_state: int, cascade: str | None) -> None:
         """Request a graceful shutdown of a running component. Non-blocking;
         must be called while holding ``self._lock``."""
@@ -403,6 +415,8 @@ class ComponentManagerNode(Node):
     def _publish_state(self) -> None:
         """Publish current components state. Must be called while holding
         ``self._lock``."""
+        if not rclpy.ok(context=self.context):
+            return
         self._state_pub.publish(self._build_state_msg())
 
     # ── Service handlers ────────────────────────────────────────────
@@ -543,9 +557,7 @@ def main(args=None):
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-    finally:
-        node.destroy_node()
-        rclpy.try_shutdown()
+    node.shutdown_all_components()
 
 
 if __name__ == '__main__':

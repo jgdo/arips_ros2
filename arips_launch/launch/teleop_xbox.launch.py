@@ -23,6 +23,7 @@ def generate_launch_description():
             ),
             launch_arguments={
                 'joy_config': 'xbox',
+                'publish_stamped_twist': 'true',
                 'config_filepath': config_filepath,
             }.items(),
         ),
