@@ -38,13 +38,13 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'baud_rate',
-            default_value='1000000',
+            default_value='500000',
             description='Feetech bus baud rate (currently ignored by feetech_ros2_driver v0.2.2, which hardcodes 1,000,000 baud)',
         ),
 
         DeclareLaunchArgument(
             'arm_enabled',
-            default_value='false',
+            default_value='true',
             description='Spawn the arm_forward_position_controller',
         ),
         DeclareLaunchArgument(

@@ -10,7 +10,7 @@
 
 
                 <param name="communication_timeout_ms">20</param>  <!-- Serial timeout: 1-1000 ms (default: 100) -->
-                <param name="use_sync_write">true</param>  <!-- Enable SyncWrite for multi-motor chains (default: true) -->
+                <param name="use_sync_write">false</param>  <!-- Enable SyncWrite for multi-motor chains (default: true) -->
                 <param name="enable_mock_mode">false</param>  <!-- Simulation mode without hardware (default: false) -->
                 <param name="reset_states_on_activate">"false"</param>  <!-- Reset position/velocity to zero on activation (default: true) -->
             </hardware>
@@ -51,32 +51,141 @@
                     <state_interface name="is_moving"/>  <!-- Motion status (1.0=moving, 0.0=stopped) -->
                 </joint>
             </xacro:if>
-            <!-- <xacro:if value="${arm_enabled}">
-                <joint name="revolute_2_0">
-                    <param name="id">1</param>
-                    <command_interface name="position" />
-                    <state_interface name="position" />
-                    <state_interface name="velocity" />
+             <xacro:if value="${arm_enabled}">
+                <joint name="revolute_2">
+                    <!-- Required Joint Parameters -->
+                    <param name="motor_id">2</param>  <!-- Motor ID on serial bus: 1-253 -->
+
+                    <!-- Optional Joint Parameters -->
+                    <param name="operating_mode">0</param>  <!-- 0=Position, 1=Velocity, 2=PWM [default: 1] -->
+                    <param name="min_position">-3.1416</param>  <!-- Min position limit in radians (default: 0.0) -->
+                    <param name="max_position">3.1416</param>  <!-- Max position limit in radians (default: 0.0) -->
+                    <param name="max_velocity_steps">3400</param>  <!-- Motor's max velocity in steps/s, model-dependent: STS3215=3400, STS3032=2900 (default: 3400) -->
+                    <param name="max_velocity">5.22</param>  <!-- Max velocity limit in rad/s (default: 5.22) -->
+                    <param name="position_center_steps">2048</param>  <!-- Motor step mapped to 0 rad: 0-4095 (default: 4095 → [0, 2π); set to 2048 for [−π, +π]) -->
+
+                    <!-- Optional EEPROM parameters (omit any line to preserve the existing EEPROM value): -->
+                    <!-- <param name="p_coefficient">32</param> -->   <!-- P gain (0-255): addr 21 (Mode 0) -->
+                    <!-- <param name="d_coefficient">32</param> -->   <!-- D gain (0-255): addr 22 (Mode 0 only; ignored in Mode 1/2) -->
+                    <!-- <param name="i_coefficient">0</param> -->    <!-- I gain (0-255): addr 23 (Mode 0), addr 39 (Mode 1) -->
+                    <!-- <param name="protection_current">462</param> -->  <!-- Hardware current cutoff (0-65535, 6.5mA units; 462 ≈ 3.0A): addr 28/29 -->
+                    <!-- <param name="overload_torque">80</param> -->      <!-- Load threshold for overload protection (0-254): addr 36 -->
+                    <!-- <param name="return_delay">0</param> -->          <!-- Response delay (0-254, 2µs units): addr 7 -->
+                    <!-- <param name="deadband">2</param> -->              <!-- Position insensitive-area (0-255): addr 26/27 (CW_DEAD/CCW_DEAD), both set to the same value (Mode 0 only; ignored in Mode 1/2) -->
+
+                    <!-- Command Interfaces (Mode 0: Position) -->
+                    <command_interface name="position"/>  <!-- Target position in radians -->
+                    <command_interface name="velocity"/>  <!-- Max speed in rad/s -->
+                    <command_interface name="acceleration"/>  <!-- Acceleration value: 0-254 -->
+
+                    <!-- State Interfaces (always exported, declarations optional but recommended) -->
+                    <state_interface name="position"/>  <!-- Current position (radians) -->
+                    <state_interface name="velocity"/>  <!-- Current velocity (rad/s) -->
+                    <state_interface name="effort"/>  <!-- Motor load (-1.0 to +1.0) -->
+                    <state_interface name="voltage"/>  <!-- Supply voltage (volts) -->
+                    <state_interface name="temperature"/>  <!-- Internal temperature (°C) -->
+                    <state_interface name="current"/>  <!-- Motor current draw (amperes) -->
+                    <state_interface name="is_moving"/>  <!-- Motion status (1.0=moving, 0.0=stopped) -->
                 </joint>
-                <joint name="revolute_3_0">
-                    <param name="id">2</param>
-                    <command_interface name="position" />
-                    <state_interface name="position" />
-                    <state_interface name="velocity" />
+                <joint name="revolute_3">
+                   <!-- Required Joint Parameters -->
+                    <param name="motor_id">3</param>  <!-- Motor ID on serial bus: 1-253 -->
+
+                    <!-- Optional Joint Parameters -->
+                    <param name="operating_mode">0</param>  <!-- 0=Position, 1=Velocity, 2=PWM [default: 1] -->
+                    <param name="min_position">-3.1416</param>  <!-- Min position limit in radians (default: 0.0) -->
+                    <param name="max_position">3.1416</param>  <!-- Max position limit in radians (default: 0.0) -->
+                    <param name="max_velocity_steps">3400</param>  <!-- Motor's max velocity in steps/s, model-dependent: STS3215=3400, STS3032=2900 (default: 3400) -->
+                    <param name="max_velocity">5.22</param>  <!-- Max velocity limit in rad/s (default: 5.22) -->
+                    <param name="position_center_steps">2048</param>  <!-- Motor step mapped to 0 rad: 0-4095 (default: 4095 → [0, 2π); set to 2048 for [−π, +π]) -->
+
+                    <!-- Optional EEPROM parameters (omit any line to preserve the existing EEPROM value): -->
+                    <!-- <param name="p_coefficient">32</param> -->   <!-- P gain (0-255): addr 21 (Mode 0) -->
+                    <!-- <param name="d_coefficient">32</param> -->   <!-- D gain (0-255): addr 22 (Mode 0 only; ignored in Mode 1/2) -->
+                    <!-- <param name="i_coefficient">0</param> -->    <!-- I gain (0-255): addr 23 (Mode 0), addr 39 (Mode 1) -->
+                    <!-- <param name="protection_current">462</param> -->  <!-- Hardware current cutoff (0-65535, 6.5mA units; 462 ≈ 3.0A): addr 28/29 -->
+                    <!-- <param name="overload_torque">80</param> -->      <!-- Load threshold for overload protection (0-254): addr 36 -->
+                    <!-- <param name="return_delay">0</param> -->          <!-- Response delay (0-254, 2µs units): addr 7 -->
+                    <!-- <param name="deadband">2</param> -->              <!-- Position insensitive-area (0-255): addr 26/27 (CW_DEAD/CCW_DEAD), both set to the same value (Mode 0 only; ignored in Mode 1/2) -->
+
+                    <!-- Command Interfaces (Mode 0: Position) -->
+                    <command_interface name="position"/>  <!-- Target position in radians -->
+                    <command_interface name="velocity"/>  <!-- Max speed in rad/s -->
+                    <command_interface name="acceleration"/>  <!-- Acceleration value: 0-254 -->
+
+                    <!-- State Interfaces (always exported, declarations optional but recommended) -->
+                    <state_interface name="position"/>  <!-- Current position (radians) -->
+                    <state_interface name="velocity"/>  <!-- Current velocity (rad/s) -->
+                    <state_interface name="effort"/>  <!-- Motor load (-1.0 to +1.0) -->
+                    <state_interface name="voltage"/>  <!-- Supply voltage (volts) -->
+                    <state_interface name="temperature"/>  <!-- Internal temperature (°C) -->
+                    <state_interface name="current"/>  <!-- Motor current draw (amperes) -->
+                    <state_interface name="is_moving"/>  <!-- Motion status (1.0=moving, 0.0=stopped) -->
                 </joint>
-                <joint name="revolute_4_0">
-                    <param name="id">3</param>
-                    <command_interface name="position" />
-                    <state_interface name="position" />
-                    <state_interface name="velocity" />
+                <joint name="revolute_4">
+                   <!-- Required Joint Parameters -->
+                    <param name="motor_id">4</param>  <!-- Motor ID on serial bus: 1-253 -->
+
+                    <!-- Optional Joint Parameters -->
+                    <param name="operating_mode">0</param>  <!-- 0=Position, 1=Velocity, 2=PWM [default: 1] -->
+                    <param name="min_position">-3.1416</param>  <!-- Min position limit in radians (default: 0.0) -->
+                    <param name="max_position">3.1416</param>  <!-- Max position limit in radians (default: 0.0) -->
+                    <param name="max_velocity_steps">3400</param>  <!-- Motor's max velocity in steps/s, model-dependent: STS3215=3400, STS3032=2900 (default: 3400) -->
+                    <param name="max_velocity">5.22</param>  <!-- Max velocity limit in rad/s (default: 5.22) -->
+                    <param name="position_center_steps">2048</param>  <!-- Motor step mapped to 0 rad: 0-4095 (default: 4095 → [0, 2π); set to 2048 for [−π, +π]) -->
+
+                    <!-- Optional EEPROM parameters (omit any line to preserve the existing EEPROM value): -->
+                    <!-- <param name="p_coefficient">32</param> -->   <!-- P gain (0-255): addr 21 (Mode 0) -->
+                    <!-- <param name="d_coefficient">32</param> -->   <!-- D gain (0-255): addr 22 (Mode 0 only; ignored in Mode 1/2) -->
+                    <!-- <param name="i_coefficient">0</param> -->    <!-- I gain (0-255): addr 23 (Mode 0), addr 39 (Mode 1) -->
+                    <!-- <param name="protection_current">462</param> -->  <!-- Hardware current cutoff (0-65535, 6.5mA units; 462 ≈ 3.0A): addr 28/29 -->
+                    <!-- <param name="overload_torque">80</param> -->      <!-- Load threshold for overload protection (0-254): addr 36 -->
+                    <!-- <param name="return_delay">0</param> -->          <!-- Response delay (0-254, 2µs units): addr 7 -->
+                    <!-- <param name="deadband">2</param> -->              <!-- Position insensitive-area (0-255): addr 26/27 (CW_DEAD/CCW_DEAD), both set to the same value (Mode 0 only; ignored in Mode 1/2) -->
+
+                    <!-- Command Interfaces (Mode 0: Position) -->
+                    <command_interface name="position"/>  <!-- Target position in radians -->
+                    <command_interface name="velocity"/>  <!-- Max speed in rad/s -->
+                    <command_interface name="acceleration"/>  <!-- Acceleration value: 0-254 -->
+
+                    <!-- State Interfaces (always exported, declarations optional but recommended) -->
+                    <state_interface name="position"/>  <!-- Current position (radians) -->
+                    <state_interface name="velocity"/>  <!-- Current velocity (rad/s) -->
+                    <state_interface name="effort"/>  <!-- Motor load (-1.0 to +1.0) -->
+                    <state_interface name="voltage"/>  <!-- Supply voltage (volts) -->
+                    <state_interface name="temperature"/>  <!-- Internal temperature (°C) -->
+                    <state_interface name="current"/>  <!-- Motor current draw (amperes) -->
+                    <state_interface name="is_moving"/>  <!-- Motion status (1.0=moving, 0.0=stopped) -->
                 </joint>
-                <joint name="slider_1_0">
-                    <param name="id">6</param>
-                    <command_interface name="position" />
-                    <state_interface name="position" />
-                    <state_interface name="velocity" />
+                <joint name="slider_1">
+                    <!-- Required Joint Parameters -->
+                    <param name="motor_id">1</param>  <!-- Motor ID on serial bus: 1-253 -->
+
+                    <!-- Optional Joint Parameters -->
+                    <param name="operating_mode">0</param>  <!-- 0=Position, 1=Velocity, 2=PWM [default: 1] -->
+                    <param name="min_position">0</param>  <!-- Min position limit in radians (default: 0.0) -->
+                    <param name="max_position">6.28</param>
+                    <param name="max_velocity_steps">3400</param>  <!-- Motor's max velocity in steps/s, model-dependent: STS3215=3400, STS3032=2900 (default: 3400) -->
+                    <param name="max_velocity">5.22</param>  <!-- Max velocity limit in rad/s (default: 5.22) -->
+                    <param name="position_center_steps">4095</param>  <!-- Motor step mapped to 0 rad: 0-4095 (default: 4095 → [0, 2π); set to 2048 for [−π, +π]) -->
+
+                    <!-- Optional EEPROM parameters (omit any line to preserve the existing EEPROM value): -->
+                    <!-- <param name="p_coefficient">32</param> -->   <!-- P gain (0-255): addr 21 (Mode 0) -->
+                    <!-- <param name="d_coefficient">32</param> -->   <!-- D gain (0-255): addr 22 (Mode 0 only; ignored in Mode 1/2) -->
+                    <!-- <param name="i_coefficient">0</param> -->    <!-- I gain (0-255): addr 23 (Mode 0), addr 39 (Mode 1) -->
+                    <!-- <param name="protection_current">462</param> -->  <!-- Hardware current cutoff (0-65535, 6.5mA units; 462 ≈ 3.0A): addr 28/29 -->
+                    <!-- <param name="overload_torque">80</param> -->      <!-- Load threshold for overload protection (0-254): addr 36 -->
+                    <!-- <param name="return_delay">0</param> -->          <!-- Response delay (0-254, 2µs units): addr 7 -->
+                    <!-- <param name="deadband">2</param> -->              <!-- Position insensitive-area (0-255): addr 26/27 (CW_DEAD/CCW_DEAD), both set to the same value (Mode 0 only; ignored in Mode 1/2) -->
+
+                    <!-- Command Interfaces (Mode 0: Position) -->
+
+                    <command_interface name="position"/>  <!-- Target position in radians -->
+
+                    <!-- State Interfaces (always exported, declarations optional but recommended) -->
+                    <state_interface name="position"/>  <!-- Current position (radians) -->
                 </joint>
-            </xacro:if> -->
+            </xacro:if>
         </ros2_control>
     </xacro:macro>
 

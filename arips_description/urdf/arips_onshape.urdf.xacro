@@ -2,7 +2,7 @@
 <robot name="arips" xmlns:xacro="http://www.ros.org/wiki/xacro">
     <xacro:arg name="use_ros2_control" default="false" />
     <xacro:arg name="serial_port" default="/dev/feetech_servo" />
-    <xacro:arg name="baud_rate" default="1000000" />
+    <xacro:arg name="baud_rate" default="500000" />
     <xacro:arg name="arm_enabled" default="true" />
     <xacro:arg name="kinect_enabled" default="true" />
     <xacro:include filename="$(find arips_description)/urdf/arips.ros2_control.xacro" />
@@ -248,31 +248,32 @@
         <child link="kinect_mount" />
     </joint>
     <joint name="revolute_2" type="revolute">
-        <origin xyz="-0.0191667 -0.01 0" rpy="-5.5358e-20 -5.84736e-19 0.290951" />
+        <origin xyz="-0.0191667 -0.01 0" rpy="0.0 0.0 0.0" />
         <axis xyz="-0 -0 1" />
         <parent link="link_0" />
         <child link="link_1" />
-        <limit effort="1" velocity="1" lower="-2.64715" upper="2.06524" />
+        <limit effort="1" velocity="1" lower="-2.3" upper="2.3" />
     </joint>
     <joint name="revolute_3" type="revolute">
-        <origin xyz="-0.17 1.11022e-16 -0.01" rpy="1.55162e-24 -8.5589e-24 -2.38997" />
+        <origin xyz="-0.17 1.11022e-16 -0.01" rpy="0.0 0.0 1.5708" />
         <axis xyz="-0 -0 1" />
         <parent link="link_1" />
         <child link="link_2" />
-        <limit effort="1" velocity="1" lower="-4.67861" upper="0.033776" />
+        <limit effort="1" velocity="1" lower="-2.3" upper="2.3" />
     </joint>
     <joint name="revolute_4" type="continuous">
-        <origin xyz="-2.77556e-17 0.15 -0.01" rpy="-4.29773e-17 4.29663e-17 -1.0386" />
+        <origin xyz="-2.77556e-17 0.15 -0.01" rpy="0.0 0.0 0.0" />
         <axis xyz="-0 -0 1" />
         <parent link="link_2" />
         <child link="link_3" />
+        <limit effort="1" velocity="1" lower="-2.3" upper="2.3" />
     </joint>
     <joint name="slider_1" type="prismatic">
         <origin xyz="0.125 -0.13 0.518053" rpy="4.32978e-17 -6.16298e-33 3.88263e-34" />
         <axis xyz="0 0 1" />
         <parent link="base_upper" />
         <child link="link_0" />
-        <limit effort="1" velocity="1" lower="-0.332053" upper="0.657947" />
+        <limit effort="1" velocity="1" lower="0.0" upper="6.0" />
     </joint>
 
     <xacro:if value="$(arg use_ros2_control)">

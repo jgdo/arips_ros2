@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 50
+    update_rate: 25
 
     feetech_joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -15,10 +15,10 @@ controller_manager:
 arm_forward_position_controller:
   ros__parameters:
     joints:
-      - revolute_2_0
-      - revolute_3_0
-      - revolute_4_0
-      - slider_1_0
+      - slider_1
+      - revolute_2
+      - revolute_3
+      - revolute_4
     interface_name: position
 
 kinect_forward_position_controller:
