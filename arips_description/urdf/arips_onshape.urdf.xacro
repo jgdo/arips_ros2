@@ -216,7 +216,7 @@
         <axis xyz="0 0 1" />
         <parent link="base_link" />
         <child link="link_0" />
-        <limit effort="1" velocity="1" lower="0.0" upper="6.2" />
+        <limit effort="1" velocity="1" lower="0.0" upper="0.871" />
     </joint>
     <joint name="kinect_joint" type="revolute">
         <origin xyz="0.14 -0.005 1.4114" rpy="0 -0 0" />

@@ -166,8 +166,9 @@
                     <param name="min_position">0.0</param>  <!-- Min position limit in radians (default: 0.0) -->
                     <param name="max_position">0.871</param>
                     <param name="max_velocity_steps">3400</param>  <!-- Motor's max velocity in steps/s, model-dependent: STS3215=3400, STS3032=2900 (default: 3400) -->
-                    <param name="max_velocity">5.22</param>  <!-- Max velocity limit in rad/s (default: 5.22) -->
-                    <param name="position_center_steps">4095</param>  <!-- Motor step mapped to 0 rad: 0-4095 (default: 4095 → [0, 2π); set to 2048 for [−π, +π]) -->
+                    <param name="max_velocity">0.3</param>  <!-- Max velocity limit in rad/s (default: 5.22) -->
+                    <param name="position_center_steps">3730</param>  <!-- Motor step mapped to 0 rad: 0-4095 (default: 4095 → [0, 2π); set to 2048 for [−π, +π]) -->
+                    <param name="position_multiplicator">0.152226</param>  <!-- Multiplier for position conversion (default: 1.0) -->
 
                     <!-- Optional EEPROM parameters (omit any line to preserve the existing EEPROM value): -->
                     <!-- <param name="p_coefficient">32</param> -->   <!-- P gain (0-255): addr 21 (Mode 0) -->

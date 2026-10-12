@@ -7,6 +7,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /TF1
         - /TF1/Frames1
         - /RobotModel1/Mass Properties1
         - /Plan global1/Offset1
@@ -98,21 +99,15 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        arips_wheel_center:
-          base_link:
-            kinect_mount:
-              kinect_link:
-                {}
-            left_wheel:
-              right_wheel:
-                alu:
-                  {}
-            link_0:
-              link_1:
-                link_2:
-                  link_3:
-                    door_gripper:
-                      {}
+        base_link:
+          kinect_mount:
+            {}
+          link_0:
+            link_1:
+              link_2:
+                link_3:
+                  door_gripper:
+                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -738,25 +733,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/XYOrbit
-      Distance: 2.7894253730773926
+      Distance: 3.118699550628662
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.22144287824630737
-        Y: -0.0755760669708252
-        Z: -2.384185791015625e-07
+        X: -0.4037870168685913
+        Y: 0.050157904624938965
+        Z: 1.9073486328125e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.49979734420776367
+      Pitch: 0.49479740858078003
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz_default_plugins)
-      Yaw: 5.697411060333252
+      Yaw: 0.7992647290229797
     Saved: ~
 Window Geometry:
   Camera:
