@@ -15,10 +15,11 @@ controller_manager:
 arm_forward_position_controller:
   ros__parameters:
     joints:
-      - slider_1
-      - revolute_2
-      - revolute_3
-      - revolute_4
+      - joint_slider
+      # - joint_2
+      # - joint_3
+      # - joint_4
+      # - joint_door_gripper
     interface_name: position
 
 kinect_forward_position_controller:

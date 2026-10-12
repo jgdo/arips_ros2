@@ -51,7 +51,7 @@ def generate_launch_description():
                     name='static_tf_pub_laser',
                     arguments=['--x', '0', '--y', '0', '--z', '0.165',
                                '--roll', '0', '--pitch', '0', '--yaw', '3.14159',
-                               '--frame-id', 'base_footprint', '--child-frame-id', 'laser_frame'],
+                               '--frame-id', 'base_link', '--child-frame-id', 'laser_frame'],
                     )
 
     csm_node = Node(
