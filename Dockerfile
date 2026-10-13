@@ -49,6 +49,7 @@ RUN apt-get update && apt-get upgrade -y \
         ros-${ROS_DISTRO}-joint-trajectory-controller \
         ros-${ROS_DISTRO}-nav2-loopback-sim \
         ros-${ROS_DISTRO}-image-transport-plugins \
+        ros-${ROS_DISTRO}-pick-ik
     && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash

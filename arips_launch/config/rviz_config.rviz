@@ -7,9 +7,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1
         - /TF1/Frames1
-        - /RobotModel1
         - /RobotModel1/Mass Properties1
         - /Plan global1/Offset1
         - /Topo path1/Offset1
@@ -101,20 +99,21 @@ Visualization Manager:
       Show Names: false
       Tree:
         arips_wheel_center:
-          base_link:
-            kinect_mount:
-              kinect_link:
+          {}
+        base_link:
+          kinect_mount:
+            kinect_link:
+              {}
+          left_wheel:
+            right_wheel:
+              alu:
                 {}
-            left_wheel:
-              right_wheel:
-                alu:
-                  {}
-            link_0:
-              link_1:
-                link_2:
-                  link_3:
-                    door_gripper:
-                      {}
+          link_0:
+            link_1:
+              link_2:
+                link_3:
+                  door_gripper:
+                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -162,70 +161,20 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /robot_description
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        alu:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        door_gripper:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        kinect_mount:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        left_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        link_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        link_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        link_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        link_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        right_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
-      Value: true
+      Value: false
       Visual Enabled: true
     - Alpha: 0.699999988079071
       Binary representation: false
@@ -520,6 +469,7 @@ Visualization Manager:
         Local Footprint: true
         Local costmap: true
         MarkerArray: true
+        MotionPlanning: true
         Path: true
         Plan global: true
         PointStamped: true
@@ -670,6 +620,7 @@ Visualization Manager:
         Local Footprint: true
         Local costmap: true
         MarkerArray: true
+        MotionPlanning: true
         Path: true
         Plan global: true
         PointStamped: true
@@ -684,6 +635,188 @@ Visualization Manager:
         Trajectories: true
         Value: true
       Zoom Factor: 1
+    - Acceleration_Scaling_Factor: 1
+      Class: moveit_rviz_plugin/MotionPlanning
+      Enabled: true
+      Move Group Namespace: ""
+      MoveIt_Allow_Approximate_IK: false
+      MoveIt_Allow_External_Program: false
+      MoveIt_Allow_Replanning: false
+      MoveIt_Allow_Sensor_Positioning: false
+      MoveIt_Planning_Attempts: 10
+      MoveIt_Planning_Time: 1
+      MoveIt_Use_Cartesian_Path: false
+      MoveIt_Use_Constraint_Aware_IK: false
+      MoveIt_Workspace:
+        Center:
+          X: 0
+          Y: 0
+          Z: 0
+        Size:
+          X: 2
+          Y: 2
+          Z: 2
+      Name: MotionPlanning
+      Planned Path:
+        Color Enabled: false
+        Interrupt Display: false
+        Links:
+          All Links Enabled: true
+          Expand Joint Details: false
+          Expand Link Details: false
+          Expand Tree: false
+          Link Tree Style: Links in Alphabetic Order
+          alu:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          base_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          door_gripper:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          kinect_mount:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          left_wheel:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_0:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_1:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_2:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_3:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          right_wheel:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+        Loop Animation: false
+        Robot Alpha: 0.5
+        Robot Color: 150; 50; 150
+        Show Robot Collision: false
+        Show Robot Visual: true
+        Show Trail: false
+        State Display Time: 3x
+        Trail Step Size: 1
+        Trajectory Topic: /display_planned_path
+        Use Sim Time: false
+      Planning Metrics:
+        Payload: 1
+        Show Joint Torques: false
+        Show Manipulability: false
+        Show Manipulability Index: false
+        Show Weight Limit: false
+        TextHeight: 0.07999999821186066
+      Planning Request:
+        Colliding Link Color: 255; 0; 0
+        Goal State Alpha: 1
+        Goal State Color: 250; 128; 0
+        Interactive Marker Size: 0
+        Joint Violation Color: 255; 0; 255
+        Planning Group: arm
+        Query Goal State: true
+        Query Start State: false
+        Show Workspace: false
+        Start State Alpha: 1
+        Start State Color: 0; 255; 0
+      Planning Scene Topic: /monitored_planning_scene
+      Robot Description: robot_description
+      Scene Geometry:
+        Scene Alpha: 0.8999999761581421
+        Scene Color: 50; 230; 50
+        Scene Display Time: 0.009999999776482582
+        Show Scene Geometry: true
+        Voxel Coloring: Z-Axis
+        Voxel Rendering: Occupied Voxels
+      Scene Robot:
+        Attached Body Color: 150; 50; 150
+        Links:
+          All Links Enabled: true
+          Expand Joint Details: false
+          Expand Link Details: false
+          Expand Tree: false
+          Link Tree Style: Links in Alphabetic Order
+          alu:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          base_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          door_gripper:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          kinect_mount:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          left_wheel:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_0:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_1:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_2:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          link_3:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          right_wheel:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+        Robot Alpha: 1
+        Show Robot Collision: false
+        Show Robot Visual: true
+      Value: true
+      Velocity_Scaling_Factor: 1
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -734,6 +867,8 @@ Visualization Manager:
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
@@ -741,25 +876,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/XYOrbit
-      Distance: 3.393627405166626
+      Distance: 3.6821985244750977
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.39482009410858154
-        Y: 0.6529030799865723
+        X: 0.008497118949890137
+        Y: -0.34484589099884033
         Z: -1.1920928955078125e-07
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6903982758522034
+      Pitch: 0.44039857387542725
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz_default_plugins)
-      Yaw: 0.4803985059261322
+      Yaw: 1.0853980779647827
     Saved: ~
 Window Geometry:
   Camera:
@@ -771,7 +906,11 @@ Window Geometry:
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000156000003e8fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000000af000003e80000001600fffffffb0000000c00430061006d00650072006100000000b0000003e60000000000000000fb0000000c00430061006d006500720061000000003b000004d20000001600fffffffb0000000a0049006d00610067006500000000af000003e80000000000000000fb0000000a0049006d00610067006501000000af000003e80000000000000000fb0000000c00430061006d00650072006100000000af000003e80000000000000000fb0000000c00430061006d0065007200610000000000ffffffff0000001600ffffff000000010000010f00000619fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b2000000000000000000000002000004b00000006ffc0100000001fb0000002600530065006d0061006e0074006900630020004d0061007000200045006400690074006f00720100000000000004b0000000b100ffffff00000003000004b000000285fc0100000003fb000000100044006900730070006c0061007900730100000000000002570000015600fffffffc0000025d000002530000025200fffffffa000000000200000003fb0000000a005600690065007700730100000000ffffffff0000009e00fffffffb0000000a005600690065007700730100000000ffffffff0000000000000000fb0000000800540069006d0065010000065a000000c70000003600fffffffb0000000800540069006d00650100000000000004500000000000000000000004b0000003e800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  MotionPlanning:
+    collapsed: false
+  MotionPlanning - Trajectory Slider:
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd0000000400000000000001d5000003e8fc0200000010fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000000af000003e80000001600fffffffb0000000c00430061006d00650072006100000000b0000003e60000000000000000fb0000000c00430061006d006500720061000000003b000004d20000001600fffffffb0000000a0049006d00610067006500000000af000003e80000000000000000fb0000000a0049006d00610067006501000000af000003e80000000000000000fb0000000c00430061006d00650072006100000000af000003e80000000000000000fb0000000c00430061006d0065007200610000000000ffffffff0000001600fffffffb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016000000010000010f00000619fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b2000000000000000000000002000004b00000006ffc0100000001fb0000002600530065006d0061006e0074006900630020004d0061007000200045006400690074006f00720100000000000004b0000000b100ffffff00000003000004b000000285fc0100000003fb000000100044006900730070006c0061007900730100000000000002570000015600fffffffc0000025d000002530000025200fffffffa000000000200000004fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670100000000ffffffff0000016200fffffffb0000000a005600690065007700730100000000ffffffff0000009e00fffffffb0000000a005600690065007700730100000000ffffffff0000000000000000fb0000000800540069006d0065010000065a000000c70000003600fffffffb0000000800540069006d00650100000000000004500000000000000000000004b0000003e800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Semantic Map Editor:

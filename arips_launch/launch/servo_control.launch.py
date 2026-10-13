@@ -9,6 +9,10 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    joint_trajectory_server_config = os.path.join(
+            get_package_share_directory('joint_trajectory_server'),
+            'config', 'joint_trajectory_server.yaml')
+    
     serial_port = LaunchConfiguration('serial_port')
     baud_rate = LaunchConfiguration('baud_rate')
     arm_enabled = LaunchConfiguration('arm_enabled')
@@ -111,6 +115,14 @@ finally:
             executable='spawner',
             arguments=['kinect_forward_position_controller', '-p', controllers_file],
             condition=IfCondition(kinect_enabled),
+            output='screen',
+        ),
+        
+        Node(
+            package='joint_trajectory_server',
+            executable='joint_trajectory_server',
+            name='joint_trajectory_server',
+            parameters=[joint_trajectory_server_config],
             output='screen',
         ),
     ])

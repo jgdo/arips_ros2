@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: arips_description
+    relative_path: urdf/arips_onshape.urdf.xacro
+  srdf:
+    relative_path: config/arips.srdf
+  package_settings:
+    author_name: Mark Prediger
+    author_email: markprediger@gmail.com
+    generated_timestamp: 1791877804

@@ -9,11 +9,11 @@ joint_trajectory_server:
     command_rate: 50.0              # Hz, resampling / command publishing rate
     max_start_deviation: 0.1        # max |first trajectory point - current state| per joint
     goal_tolerance: 0.02            # per-joint final position tolerance
-    progress_timeout: 0.7           # s without movement of an expected-to-move joint -> abort
+    progress_timeout: 200.0      # TODO     # s without movement of an expected-to-move joint -> abort
     progress_threshold: 0.002       # min position change counting as progress
     state_timeout: 0.3              # s, joint states older than this are considered stale
 
-    action_name: "follow_joint_trajectory"
+    action_name: "/arm_controller/follow_joint_trajectory"
     command_topic: "/arm_forward_position_controller/commands"
     joint_states_topic: "/joint_states"
     robot_description_topic: "/robot_description"
