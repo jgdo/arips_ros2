@@ -6,7 +6,7 @@ joint_trajectory_server:
     max_velocity: [0.2, 1.0, 1.0, 1.0, 1.0]
     max_acceleration: [0.2, 2.0, 2.0, 1.0, 1.0]
 
-    command_rate: 25.0              # Hz, resampling / command publishing rate
+    command_rate: 50.0              # Hz, resampling / command publishing rate
     max_start_deviation: 0.1        # max |first trajectory point - current state| per joint
     goal_tolerance: 0.02            # per-joint final position tolerance
     progress_timeout: 0.7           # s without movement of an expected-to-move joint -> abort

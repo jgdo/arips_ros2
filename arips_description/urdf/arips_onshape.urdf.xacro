@@ -21,6 +21,12 @@
                 <color rgba="0.156863 0.156863 0.156863 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/Alu.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="base_link">
         <inertial>
@@ -37,6 +43,12 @@
                 <color rgba="0.756863 0.462745 0.109804 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/base_link.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="door_gripper">
         <inertial>
@@ -53,6 +65,12 @@
                 <color rgba="0 0.588235 1 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0 -0.005 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/Door_gripper.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="kinect_mount">
         <inertial>
@@ -69,6 +87,12 @@
                 <color rgba="0.156863 0.156863 0.156863 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="-0.14 0.005 -1.4114" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/Kinect.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="left_wheel">
         <inertial>
@@ -85,6 +109,12 @@
                 <color rgba="0 0.588235 1 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/left_wheel.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="link_0">
         <inertial>
@@ -101,6 +131,12 @@
                 <color rgba="0 0.588235 1 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0 0 -0.192" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/link_0.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="link_1">
         <inertial>
@@ -117,6 +153,12 @@
                 <color rgba="0 0.588235 1 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0.0962 -6.73556e-19 -0.25755" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/link_1.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="link_2">
         <inertial>
@@ -133,6 +175,12 @@
                 <color rgba="0 0.588235 1 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0.2662 -6.73556e-19 -0.25755" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/link_2.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="link_3">
         <inertial>
@@ -149,6 +197,12 @@
                 <color rgba="0 0.588235 1 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0.4162 4.57793e-17 -0.20595" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/link_3.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <link name="right_wheel">
         <inertial>
@@ -165,6 +219,12 @@
                 <color rgba="0 0.588235 1 1" />
             </material>
         </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 -0 0" />
+            <geometry>
+                <mesh filename="package://arips_description/meshes/right_wheel.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
     </link>
     <joint name="group_1_fastened_joint" type="fixed">
         <origin xyz="0 0 0" rpy="0 -0 0" />

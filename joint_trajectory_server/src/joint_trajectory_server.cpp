@@ -176,8 +176,8 @@ private:
     {
         const auto & traj = goal.trajectory;
         const size_t n = joints_.size();
-        if (traj.points.size() < 2) {
-            error = "trajectory needs at least 2 points";
+        if (traj.points.empty()) {
+            error = "trajectory is empty";
             return std::nullopt;
         }
         // map trajectory column -> controllable joint index
@@ -194,51 +194,87 @@ private:
         }
 
         Spline sp;
-        bool all_vel = true;
-        const double t0 = rclcpp::Duration(traj.points.front().time_from_start).seconds();
-        for (const auto & pt : traj.points) {
+        if (traj.points.size() == 1) {
+            const auto & pt = traj.points[0];
             if (pt.positions.size() != traj.joint_names.size()) {
                 error = "point has wrong number of positions";
                 return std::nullopt;
             }
-            const double t = rclcpp::Duration(pt.time_from_start).seconds() - t0;
-            if (!sp.times.empty() && t <= sp.times.back()) {
-                error = "time_from_start must be strictly increasing";
+            if (!pt.velocities.empty() && pt.velocities.size() != traj.joint_names.size()) {
+                error = "point has wrong number of velocities";
                 return std::nullopt;
             }
             Vec p = current;  // joints not in the trajectory hold their current position
             for (size_t c = 0; c < col.size(); ++c) {
                 p[col[c]] = pt.positions[c];
             }
-            sp.times.push_back(t);
-            sp.pos.push_back(p);
-            all_vel = all_vel && pt.velocities.size() == traj.joint_names.size();
-        }
-
-        const size_t m = sp.times.size();
-        sp.vel.assign(m, Vec(n, 0.0));
-        for (size_t k = 0; k < m; ++k) {
-            if (all_vel) {
-                for (size_t c = 0; c < col.size(); ++c) {
-                    sp.vel[k][col[c]] = traj.points[k].velocities[c];
-                }
-            } else if (k > 0 && k + 1 < m) {
+            double t = rclcpp::Duration(pt.time_from_start).seconds();
+            if (t <= 0.0) {
+                double min_t = 1.0 / rate_;
                 for (size_t j = 0; j < n; ++j) {
-                    sp.vel[k][j] = (sp.pos[k + 1][j] - sp.pos[k - 1][j]) / (sp.times[k + 1] - sp.times[k - 1]);
+                    const double d = std::abs(p[j] - current[j]);
+                    min_t = std::max(min_t, 1.5 * d / max_vel_[j]);
+                    min_t = std::max(min_t, std::sqrt(6.0 * d / max_acc_[j]));
+                }
+                t = min_t;
+            } else if (t < 1.0 / rate_) {
+                t = 1.0 / rate_;
+            }
+            sp.times = {0.0, t};
+            sp.pos = {current, p};
+            sp.vel = {Vec(n, 0.0), Vec(n, 0.0)};
+            if (!pt.velocities.empty()) {
+                for (size_t c = 0; c < col.size(); ++c) {
+                    sp.vel[1][col[c]] = pt.velocities[c];
                 }
             }
-        }
+        } else {
+            bool all_vel = true;
+            const double t0 = rclcpp::Duration(traj.points.front().time_from_start).seconds();
+            for (const auto & pt : traj.points) {
+                if (pt.positions.size() != traj.joint_names.size()) {
+                    error = "point has wrong number of positions";
+                    return std::nullopt;
+                }
+                const double t = rclcpp::Duration(pt.time_from_start).seconds() - t0;
+                if (!sp.times.empty() && t <= sp.times.back()) {
+                    error = "time_from_start must be strictly increasing";
+                    return std::nullopt;
+                }
+                Vec p = current;  // joints not in the trajectory hold their current position
+                for (size_t c = 0; c < col.size(); ++c) {
+                    p[col[c]] = pt.positions[c];
+                }
+                sp.times.push_back(t);
+                sp.pos.push_back(p);
+                all_vel = all_vel && pt.velocities.size() == traj.joint_names.size();
+            }
 
-        for (size_t j = 0; j < n; ++j) {
-            if (std::abs(sp.pos[0][j] - current[j]) > max_start_dev_) {
-                error = "start of trajectory too far from current state for joint '" + joints_[j] + "'";
-                return std::nullopt;
+            const size_t m = sp.times.size();
+            sp.vel.assign(m, Vec(n, 0.0));
+            for (size_t k = 0; k < m; ++k) {
+                if (all_vel) {
+                    for (size_t c = 0; c < col.size(); ++c) {
+                        sp.vel[k][col[c]] = traj.points[k].velocities[c];
+                    }
+                } else if (k > 0 && k + 1 < m) {
+                    for (size_t j = 0; j < n; ++j) {
+                        sp.vel[k][j] = (sp.pos[k + 1][j] - sp.pos[k - 1][j]) / (sp.times[k + 1] - sp.times[k - 1]);
+                    }
+                }
+            }
+
+            for (size_t j = 0; j < n; ++j) {
+                if (std::abs(sp.pos[0][j] - current[j]) > max_start_dev_) {
+                    error = "start of trajectory too far from current state for joint '" + joints_[j] + "'";
+                    return std::nullopt;
+                }
             }
         }
 
         // Stretch time uniformly until velocity/acceleration limits hold.
         const double dt = 1.0 / rate_;
-        for (int iter = 0; iter < 10; ++iter) {
+        for (int iter = 0; iter < 20; ++iter) {
             double scale = 1.0;
             for (double t = 0.0;; t += dt) {
                 auto s = sp.eval(t);
@@ -334,8 +370,17 @@ private:
     void execute(std::shared_ptr<GoalHandle> gh)
     {
         using clock = std::chrono::steady_clock;
+        clock::time_point execution_start = clock::now();
         auto result = std::make_shared<FollowJT::Result>();
         auto done = [&](int code, const std::string & msg) {
+            const double execution_time = std::chrono::duration<double>(clock::now() - execution_start).count();
+            if (msg.empty()) {
+                RCLCPP_INFO(
+                    get_logger(), "Trajectory execution finished successfully in %.3f s", execution_time);
+            } else {
+                RCLCPP_INFO(
+                    get_logger(), "Trajectory execution finished after %.3f s: %s", execution_time, msg.c_str());
+            }
             result->error_code = code;
             result->error_string = msg;
             executing_ = false;
@@ -363,6 +408,10 @@ private:
 
         auto next = clock::now();
         const auto start = next;
+        execution_start = start;
+        RCLCPP_INFO(
+            get_logger(), "Starting trajectory execution with %zu points; estimated duration %.3f s",
+            gh->get_goal()->trajectory.points.size(), sp->duration());
         while (rclcpp::ok()) {
             if (gh->is_canceling()) {
                 holdCurrent();
