@@ -10,7 +10,7 @@
 
 
                 <param name="communication_timeout_ms">20</param>  <!-- Serial timeout: 1-1000 ms (default: 100) -->
-                <param name="use_sync_write">false</param>  <!-- Enable SyncWrite for multi-motor chains (default: true) -->
+                <param name="use_sync_write">true</param>  <!-- Enable SyncWrite for multi-motor chains (default: true) -->
                 <param name="enable_mock_mode">false</param>  <!-- Simulation mode without hardware (default: false) -->
                 <param name="reset_states_on_activate">"false"</param>  <!-- Reset position/velocity to zero on activation (default: true) -->
             </hardware>
