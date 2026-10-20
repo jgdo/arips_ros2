@@ -1,0 +1,38 @@
+adc_joint_state:
+  ros__parameters:
+    port: /dev/ttyACM0
+    baudrate: 115200
+    topic: joint_states
+    frame_id: ""
+    num_values: 6
+    joints:
+      leader_joint_1:
+        index: 0
+        min_adc: 3525
+        min_angle_deg: -90
+        max_adc: 825
+        max_angle_deg: 90.0
+      leader_joint_2:
+        index: 1
+        min_adc: 600
+        min_angle_deg: 90.0
+        max_adc: 3415
+        max_angle_deg: -90.0
+      leader_joint_3:
+        index: 2
+        min_adc: 790
+        min_angle_deg: 0.0
+        max_adc: 2200
+        max_angle_deg: 90.0
+      leader_joint_4:
+        index: 4
+        min_adc: 1882
+        min_angle_deg: 0.0
+        max_adc: 3200
+        max_angle_deg: -90.0
+      leader_joint_gripper:
+        index: 5
+        min_adc: 100
+        min_angle_deg: -30.0
+        max_adc: 3500
+        max_angle_deg: 90.0

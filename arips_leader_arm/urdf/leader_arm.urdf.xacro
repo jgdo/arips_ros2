@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="leader_arm">
+
+  <!-- ===== Adjustable dimensions (meters) ===== -->
+  <xacro:property name="base_size_x" value="0.08"/>
+  <xacro:property name="base_size_y" value="0.08"/>
+  <xacro:property name="base_thickness" value="0.01"/>
+
+  <xacro:property name="link_1_length" value="0.05"/>
+  <xacro:property name="link_1_radius" value="0.02"/>
+  <xacro:property name="link_2_length" value="0.12"/>
+  <xacro:property name="link_3_length" value="0.10"/>
+  <xacro:property name="link_4_length" value="0.06"/>
+  <xacro:property name="link_5_length" value="0.04"/>
+
+  <!-- gripper bar: wide along y -->
+  <xacro:property name="gripper_length" value="0.04"/>
+  <xacro:property name="gripper_width" value="0.10"/>
+  <xacro:property name="gripper_thickness" value="0.02"/>
+
+  <!-- cuboid cross-section of links 2..4 -->
+  <xacro:property name="link_width" value="0.02"/>
+  <xacro:property name="link_depth" value="0.02"/>
+
+  <!-- Joint limits (rad) and dynamics -->
+  <xacro:property name="joint_limit" value="${pi / 2}"/>
+  <xacro:property name="joint_effort" value="1.0"/>
+  <xacro:property name="joint_velocity" value="2.0"/>
+
+  <!-- Sideways offset between neighbouring links so they do not overlap -->
+  <xacro:property name="link_y_offset" value="0.02"/>
+
+  <material name="grey"><color rgba="0.5 0.5 0.5 1"/></material>
+  <material name="blue"><color rgba="0.2 0.4 0.8 1"/></material>
+  <material name="orange"><color rgba="0.9 0.5 0.1 1"/></material>
+
+  <!-- Cuboid link whose origin is at its lower joint, extending along +z -->
+  <xacro:macro name="box_link" params="name length material">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 ${length / 2}"/>
+        <geometry><box size="${link_width} ${link_depth} ${length}"/></geometry>
+        <material name="${material}"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${length / 2}"/>
+        <geometry><box size="${link_width} ${link_depth} ${length}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="revolute_joint" params="name parent child xyz axis">
+    <joint name="${name}" type="revolute">
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+      <origin xyz="${xyz}"/>
+      <axis xyz="${axis}"/>
+      <limit lower="${-joint_limit}" upper="${joint_limit}"
+             effort="${joint_effort}" velocity="${joint_velocity}"/>
+    </joint>
+  </xacro:macro>
+
+  <link name="base_plate">
+    <visual>
+      <origin xyz="0 0 ${base_thickness / 2}"/>
+      <geometry><box size="${base_size_x} ${base_size_y} ${base_thickness}"/></geometry>
+      <material name="grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${base_thickness / 2}"/>
+      <geometry><box size="${base_size_x} ${base_size_y} ${base_thickness}"/></geometry>
+    </collision>
+  </link>
+
+  <!-- link_1: cylinder rotating about the vertical axis -->
+  <link name="link_1">
+    <visual>
+      <origin xyz="0 0 ${link_1_length / 2}"/>
+      <geometry><cylinder radius="${link_1_radius}" length="${link_1_length}"/></geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${link_1_length / 2}"/>
+      <geometry><cylinder radius="${link_1_radius}" length="${link_1_length}"/></geometry>
+    </collision>
+  </link>
+
+  <xacro:revolute_joint name="leader_joint_1" parent="base_plate" child="link_1"
+                        xyz="0 0 ${base_thickness}" axis="0 0 1"/>
+
+  <xacro:box_link name="link_2" length="${link_2_length}" material="orange"/>
+  <xacro:revolute_joint name="leader_joint_2" parent="link_1" child="link_2"
+                        xyz="0 0 ${link_1_length}" axis="0 1 0"/>
+
+  <xacro:box_link name="link_3" length="${link_3_length}" material="blue"/>
+  <xacro:revolute_joint name="leader_joint_3" parent="link_2" child="link_3"
+                        xyz="0 ${link_y_offset} ${link_2_length}" axis="0 1 0"/>
+
+  <!-- URDF mimic supports a single source joint, so keeping link_4 upright
+       (q2 + q3 + q4 = 0) takes two chained mimic joints: joint_4 = -q2, joint_4b = -q3 -->
+  <link name="link_4_helper"/>
+  <joint name="leader_joint_virtual" type="revolute">
+    <parent link="link_3"/>
+    <child link="link_4_helper"/>
+    <origin xyz="0 ${-link_y_offset} ${link_3_length}"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${-2 * pi}" upper="${2 * pi}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+    <mimic joint="leader_joint_2" multiplier="-1" offset="0"/>
+  </joint>
+
+  <xacro:box_link name="link_4" length="${link_4_length}" material="orange"/>
+  <joint name="leader_joint_virtual_b" type="revolute">
+    <parent link="link_4_helper"/>
+    <child link="link_4"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${-2 * pi}" upper="${2 * pi}" effort="${joint_effort}" velocity="${joint_velocity}"/>
+    <mimic joint="leader_joint_3" multiplier="-1" offset="3.14159"/>
+  </joint>
+
+  <!-- link_4 points down, so its local +z (end of link) is downward.
+       joint_4 rotates about the link axis, joint_gripper about the horizontal x axis. -->
+  <xacro:box_link name="link_5" length="${link_5_length}" material="blue"/>
+  <xacro:revolute_joint name="leader_joint_4" parent="link_4" child="link_5"
+                        xyz="0 0 ${link_4_length}" axis="0 0 1"/>
+
+  <link name="link_gripper">
+    <visual>
+      <origin xyz="-${gripper_thickness} 0 0"/>
+      <geometry><box size="${gripper_thickness} ${gripper_width} ${gripper_length}"/></geometry>
+      <material name="orange"/>
+    </visual>
+    <collision>
+      <origin xyz="-${gripper_thickness} 0 0"/>
+      <geometry><box size="${gripper_thickness} ${gripper_width} ${gripper_length}"/></geometry>
+    </collision>
+  </link>
+  <xacro:revolute_joint name="leader_joint_gripper" parent="link_5" child="link_gripper"
+                        xyz="0 0 ${link_5_length}" axis="-1 0 0"/>
+
+</robot>
