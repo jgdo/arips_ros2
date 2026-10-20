@@ -9,16 +9,21 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import UInt16MultiArray
 
-JOINT_FIELDS = ('index', 'min_adc', 'min_angle_deg', 'max_adc', 'max_angle_deg')
+JOINT_FIELDS = (
+    'index', 'low_adc', 'low_angle_deg', 'high_adc', 'high_angle_deg',
+    'min_angle_deg', 'max_angle_deg')
 
 
-def adc_to_angle(adc, min_adc, min_angle, max_adc, max_angle):
-    """Linearly map adc to an angle, clamping to the configured range."""
-    if max_adc == min_adc:
-        return min_angle
-    ratio = (adc - min_adc) / (max_adc - min_adc)
-    ratio = min(max(ratio, 0.0), 1.0)
-    return min_angle + ratio * (max_angle - min_angle)
+def adc_to_angle(
+        adc, low_adc, low_angle_deg, high_adc, high_angle_deg,
+        min_angle_deg, max_angle_deg):
+    """Linearly map adc to an angle and clamp it to the configured limits."""
+    if high_adc == low_adc:
+        angle_deg = low_angle_deg
+    else:
+        ratio = (adc - low_adc) / (high_adc - low_adc)
+        angle_deg = low_angle_deg + ratio * (high_angle_deg - low_angle_deg)
+    return min(max(angle_deg, min_angle_deg), max_angle_deg)
 
 
 class AdcJointStateNode(Node):
@@ -70,6 +75,9 @@ class AdcJointStateNode(Node):
             missing = [f for f in JOINT_FIELDS if f not in cfg]
             if missing:
                 raise ValueError(f"Joint '{name}' is missing fields: {missing}")
+            if cfg['min_angle_deg'] > cfg['max_angle_deg']:
+                raise ValueError(
+                    f"Joint '{name}' min_angle_deg must not exceed max_angle_deg")
             idx = int(cfg['index'])
             cfg['index'] = idx
             if idx < 0 or idx >= self._num_values:
@@ -118,8 +126,9 @@ class AdcJointStateNode(Node):
         msg.header.frame_id = self._frame_id
         for name, cfg in self._joints.items():
             angle_deg = adc_to_angle(
-                values[cfg['index']], cfg['min_adc'], cfg['min_angle_deg'],
-                cfg['max_adc'], cfg['max_angle_deg'])
+                values[cfg['index']], cfg['low_adc'], cfg['low_angle_deg'],
+                cfg['high_adc'], cfg['high_angle_deg'],
+                cfg['min_angle_deg'], cfg['max_angle_deg'])
             msg.name.append(name)
             msg.position.append(math.radians(angle_deg))
         self._pub.publish(msg)
