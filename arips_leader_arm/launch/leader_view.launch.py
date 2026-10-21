@@ -26,6 +26,7 @@ def generate_launch_description():
             package='joint_state_publisher_gui',
             executable='joint_state_publisher_gui',
             condition=IfCondition(LaunchConfiguration('gui')),
+            remappings=[('robot_description', '/leader_robot_description')],
         ),
         Node(
             package='rviz2',
