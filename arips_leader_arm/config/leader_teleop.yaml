@@ -1,0 +1,14 @@
+leader_teleop:
+  ros__parameters:
+    follower_base_frame: base_link
+    follower_ee_frame: door_gripper
+    leader_base_frame: leader_base_plate
+    leader_ee_frame: leader_link_5
+
+    # Scale applied to the leader's xyz motion (rotation is never scaled)
+    scale: 2.0
+    publish_rate: 50.0
+
+    # Float32: seconds teleoperation stays active; repeated messages reset the timer
+    activate_topic: activate_leader_teleop
+    pose_topic: /servo_node/pose_target_cmds

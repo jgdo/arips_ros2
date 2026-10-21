@@ -51,41 +51,41 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        base_plate:
+        leader_base_plate:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        link_1:
+        leader_link_1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        link_2:
+        leader_link_2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        link_3:
+        leader_link_3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        link_4:
+        leader_link_4:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        link_4_helper:
+        leader_link_4_helper:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_5:
+        leader_link_5:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        link_gripper:
+        leader_link_gripper:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -105,21 +105,21 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        base_plate:
+        leader_base_plate:
           Value: true
-        link_1:
+        leader_link_1:
           Value: true
-        link_2:
+        leader_link_2:
           Value: true
-        link_3:
+        leader_link_3:
           Value: true
-        link_4:
+        leader_link_4:
           Value: true
-        link_4_helper:
+        leader_link_4_helper:
           Value: true
-        link_5:
+        leader_link_5:
           Value: true
-        link_gripper:
+        leader_link_gripper:
           Value: true
       Marker Scale: 0.30000001192092896
       Name: TF
@@ -127,21 +127,21 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        base_plate:
-          link_1:
-            link_2:
-              link_3:
-                link_4_helper:
-                  link_4:
-                    link_5:
-                      link_gripper:
+        leader_base_plate:
+          leader_link_1:
+            leader_link_2:
+              leader_link_3:
+                leader_link_4_helper:
+                  leader_link_4:
+                    leader_link_5:
+                      leader_link_gripper:
                         {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_plate
+    Fixed Frame: leader_base_plate
     Frame Rate: 30
   Name: root
   Tools:

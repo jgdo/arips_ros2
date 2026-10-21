@@ -2,7 +2,9 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 from ament_index_python.packages import get_package_share_directory
+from launch_param_builder import load_yaml
 import os
+from pathlib import Path
 
 
 def generate_launch_description():
@@ -34,5 +36,22 @@ def generate_launch_description():
              "publish_robot_description_semantic": True},
         ],
     )
+    
+    # servo_params = load_yaml(
+    #     Path(get_package_share_directory("arips_moveit_config")) / "config" / "servo.yaml"
+    # )
+    # servo_node = Node(
+    #     package="moveit_servo",
+    #     executable="servo_node",
+    #     name="servo_node",
+    #     output="screen",
+    #     parameters=[
+    #         servo_params,
+    #         moveit_config.robot_description,
+    #         moveit_config.robot_description_semantic,
+    #         moveit_config.robot_description_kinematics,
+    #         moveit_config.joint_limits,
+    #     ],
+    # )
     
     return LaunchDescription([move_group])

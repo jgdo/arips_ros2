@@ -29,6 +29,7 @@ setup(
     entry_points={
         'console_scripts': [
             'adc_joint_state_node = arips_leader_arm.adc_joint_state_node:main',
+            'leader_teleop = arips_leader_arm.leader_teleop:main',
         ],
     },
 )
