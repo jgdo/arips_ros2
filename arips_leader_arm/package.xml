@@ -11,6 +11,10 @@
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>moveit_py</depend>
+  <exec_depend>moveit_configs_utils</exec_depend>
+  <exec_depend>arips_moveit_config</exec_depend>
+  <exec_depend>arips_description</exec_depend>
   <depend>tf2_ros_py</depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>

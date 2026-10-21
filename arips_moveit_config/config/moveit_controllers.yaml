@@ -5,14 +5,20 @@ moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControll
 moveit_simple_controller_manager:
   controller_names:
     - arm_controller
+    - door_gripper_group_controller
 
   arm_controller:
     type: FollowJointTrajectory
-    action_ns: follow_joint_trajectory
-    default: true
     joints:
       - joint_slider
       - joint_2
       - joint_3
       - joint_4
+    action_ns: follow_joint_trajectory
+    default: true
+  door_gripper_group_controller:
+    type: GripperCommand
+    joints:
       - joint_door_gripper
+    action_ns: door_gripper_cmd
+    default: true

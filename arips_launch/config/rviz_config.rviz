@@ -7,12 +7,12 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1
         - /TF1/Frames1
         - /RobotModel1/Mass Properties1
         - /Plan global1/Offset1
         - /Topo path1/Offset1
         - /Trajectories1/Topic1
+        - /DepthCloud1
         - /Camera1/Topic1
         - /Corrected Map1/Topic1
         - /Segmentation1/Topic1
@@ -21,7 +21,6 @@ Panels:
         - /Route Graph1/Namespaces1
         - /MarkerArray3/Topic1
         - /MarkerArray3/Namespaces1
-        - /Leader target pose1
       Splitter Ratio: 0.4886630177497864
     Tree Height: 509
   - Class: rviz_common/Selection
@@ -77,26 +76,10 @@ Visualization Manager:
         base_link:
           Value: false
         door_gripper:
-          Value: false
+          Value: true
         kinect_link:
           Value: false
         kinect_mount:
-          Value: false
-        leader_base_plate:
-          Value: false
-        leader_link_1:
-          Value: false
-        leader_link_2:
-          Value: false
-        leader_link_3:
-          Value: false
-        leader_link_4:
-          Value: false
-        leader_link_4_helper:
-          Value: false
-        leader_link_5:
-          Value: false
-        leader_link_gripper:
           Value: false
         left_wheel:
           Value: false
@@ -121,15 +104,6 @@ Visualization Manager:
             kinect_mount:
               kinect_link:
                 {}
-            leader_base_plate:
-              leader_link_1:
-                leader_link_2:
-                  leader_link_3:
-                    leader_link_4_helper:
-                      leader_link_4:
-                        leader_link_5:
-                          leader_link_gripper:
-                            {}
             left_wheel:
               right_wheel:
                 alu:
@@ -441,10 +415,10 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Image Topic: /kinect/rgb/image_raw
       Color Transformer: RGB8
-      Color Transport Hint: compressed
+      Color Transport Hint: raw
       Decay Time: 0
       Depth Map Topic: /kinect/depth/image_raw
-      Depth Map Transport Hint: compressedDepth
+      Depth Map Transport Hint: raw
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -484,7 +458,6 @@ Visualization Manager:
         Value: /kinect/depth/image_raw
       Value: false
       Visibility:
-        "": true
         Camera: true
         Corrected Map: true
         DepthCloud: true
@@ -494,6 +467,7 @@ Visualization Manager:
         InteractiveMarkers: true
         LaserScan: true
         Leader: true
+        Leader target pose: true
         Local Footprint: true
         Local costmap: true
         MarkerArray: true
@@ -637,7 +611,6 @@ Visualization Manager:
         Value: /kinect/rgb/image_raw
       Value: false
       Visibility:
-        "": true
         Camera: true
         Corrected Map: true
         DepthCloud: true
@@ -647,6 +620,7 @@ Visualization Manager:
         InteractiveMarkers: true
         LaserScan: true
         Leader: true
+        Leader target pose: true
         Local Footprint: true
         Local costmap: true
         MarkerArray: true
@@ -665,7 +639,7 @@ Visualization Manager:
         Trajectories: true
         Value: true
       Zoom Factor: 1
-    - Acceleration_Scaling_Factor: 0.1
+    - Acceleration_Scaling_Factor: 1
       Class: moveit_rviz_plugin/MotionPlanning
       Enabled: true
       Move Group Namespace: ""
@@ -846,7 +820,7 @@ Visualization Manager:
         Show Robot Collision: false
         Show Robot Visual: true
       Value: true
-      Velocity_Scaling_Factor: 0.1
+      Velocity_Scaling_Factor: 1
     - Alpha: 1
       Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
@@ -865,45 +839,6 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        leader_base_plate:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        leader_link_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        leader_link_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        leader_link_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        leader_link_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        leader_link_4_helper:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        leader_link_5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        leader_link_gripper:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
@@ -930,7 +865,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /leader_teleop/target_pose
+        Value: /pose_servo/pose_target_cmds
       Value: true
   Enabled: true
   Global Options:
@@ -986,6 +921,9 @@ Visualization Manager:
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
@@ -993,25 +931,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/XYOrbit
-      Distance: 2.293945550918579
+      Distance: 2.7726268768310547
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.06204383075237274
-        Y: -0.5015978813171387
-        Z: -4.76837158203125e-07
+        X: -0.14101755619049072
+        Y: -0.184409499168396
+        Z: -2.384185791015625e-07
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7203983068466187
+      Pitch: 0.43539872765541077
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz_default_plugins)
-      Yaw: 1.2853978872299194
+      Yaw: 1.060401201248169
     Saved: ~
 Window Geometry:
   Camera:

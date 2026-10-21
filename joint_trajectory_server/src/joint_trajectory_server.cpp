@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <control_msgs/action/follow_joint_trajectory.hpp>
+#include <control_msgs/action/gripper_command.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
@@ -20,6 +21,8 @@
 
 using FollowJT = control_msgs::action::FollowJointTrajectory;
 using GoalHandle = rclcpp_action::ServerGoalHandle<FollowJT>;
+using GripperCmd = control_msgs::action::GripperCommand;
+using GripperGH = rclcpp_action::ServerGoalHandle<GripperCmd>;
 using Vec = std::vector<double>;
 
 namespace
@@ -110,9 +113,27 @@ public:
             },
             [](std::shared_ptr<GoalHandle>) { return rclcpp_action::CancelResponse::ACCEPT; },
             [this](std::shared_ptr<GoalHandle> gh) {
-                executing_ = true;
                 std::thread([this, gh] { execute(gh); }).detach();
             });
+
+        const auto gripper_joint = declare_parameter<std::string>("gripper_joint", "");
+        const auto gripper_action = declare_parameter<std::string>("gripper_action_name", "gripper_command");
+        if (!gripper_joint.empty()) {
+            auto it = index_.find(gripper_joint);
+            if (it == index_.end()) {
+                throw std::runtime_error("gripper_joint must be one of 'joints'");
+            }
+            gripper_idx_ = it->second;
+            gripper_server_ = rclcpp_action::create_server<GripperCmd>(
+                this, gripper_action,
+                [this](const rclcpp_action::GoalUUID &, std::shared_ptr<const GripperCmd::Goal> goal) {
+                    return handleGripperGoal(*goal);
+                },
+                [](std::shared_ptr<GripperGH>) { return rclcpp_action::CancelResponse::ACCEPT; },
+                [this](std::shared_ptr<GripperGH> gh) {
+                    std::thread([this, gh] { executeGripper(gh); }).detach();
+                });
+        }
         RCLCPP_INFO(get_logger(), "Waiting for joint states and robot description");
     }
 
@@ -348,12 +369,49 @@ private:
         if (!checkLimits(*sp, error)) {
             return reject(error);
         }
+        bool expected = false;
+        if (!executing_.compare_exchange_strong(expected, true)) {
+            return reject("another trajectory or gripper command is being executed");
+        }
+        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+    }
+
+    rclcpp_action::GoalResponse handleGripperGoal(const GripperCmd::Goal & goal)
+    {
+        auto reject = [this](const std::string & why) {
+            RCLCPP_WARN(get_logger(), "Rejecting gripper command: %s", why.c_str());
+            return rclcpp_action::GoalResponse::REJECT;
+        };
+        if (executing_.load()) {
+            return reject("another trajectory or gripper command is being executed");
+        }
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!have_limits_) {
+                return reject("robot description / joint limits not available");
+            }
+            const auto & lim = limits_[gripper_idx_];
+            if (lim && (goal.command.position < lim->first - 1e-9 || goal.command.position > lim->second + 1e-9)) {
+                return reject("gripper position outside joint limits");
+            }
+        }
+        if (!currentPositions()) {
+            return reject("no recent joint states for all controllable joints");
+        }
+        bool expected = false;
+        if (!executing_.compare_exchange_strong(expected, true)) {
+            return reject("another trajectory or gripper command is being executed");
+        }
         return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     }
 
     // ------------------------------------------------------------- execution
     void publish(const Vec & p)
     {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            last_cmd_ = p;
+        }
         std_msgs::msg::Float64MultiArray msg;
         msg.data = p;
         cmd_pub_->publish(msg);
@@ -365,6 +423,94 @@ private:
         if (auto cur = currentPositions()) {
             publish(*cur);
         }
+    }
+
+    void executeGripper(std::shared_ptr<GripperGH> gh)
+    {
+        using clock = std::chrono::steady_clock;
+        auto result = std::make_shared<GripperCmd::Result>();
+        auto feedback = std::make_shared<GripperCmd::Feedback>();
+        const double target = gh->get_goal()->command.position;
+        const size_t g = gripper_idx_;
+
+        auto finish = [&](bool reached, bool stalled, double pos) {
+            result->position = pos;
+            result->effort = 0.0;
+            result->reached_goal = reached;
+            result->stalled = stalled;
+            executing_ = false;
+        };
+
+        auto cur = currentPositions();
+        if (!cur) {
+            finish(false, false, 0.0);
+            gh->abort(result);
+            return;
+        }
+        // Other joints keep their last commanded value; fall back to measured positions.
+        Vec cmd = *cur;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (last_cmd_.size() == joints_.size()) {
+                cmd = last_cmd_;
+            }
+        }
+        cmd[g] = (*cur)[g];
+
+        const auto period = std::chrono::duration_cast<clock::duration>(std::chrono::duration<double>(1.0 / rate_));
+        double ref_pos = (*cur)[g];
+        auto ref_time = clock::now();
+        auto next = clock::now();
+
+        while (rclcpp::ok()) {
+            cur = currentPositions();
+            if (!cur) {
+                holdCurrent();
+                finish(false, false, 0.0);
+                gh->abort(result);
+                return;
+            }
+            if (gh->is_canceling()) {
+                cmd[g] = (*cur)[g];
+                publish(cmd);
+                finish(false, false, (*cur)[g]);
+                gh->canceled(result);
+                return;
+            }
+
+            // Velocity-limited ramp of the gripper command towards the target.
+            const double step = max_vel_[g] / rate_;
+            cmd[g] += std::clamp(target - cmd[g], -step, step);
+            publish(cmd);
+
+            const double pos = (*cur)[g];
+            const bool reached = std::abs(pos - target) <= goal_tol_;
+            const bool cmd_done = std::abs(target - cmd[g]) < 1e-9;
+
+            feedback->position = pos;
+            feedback->effort = 0.0;
+            feedback->reached_goal = reached;
+            feedback->stalled = false;
+            gh->publish_feedback(feedback);
+
+            if (reached && cmd_done) {
+                finish(true, false, pos);
+                gh->succeed(result);
+                return;
+            }
+            if (std::abs(pos - ref_pos) > progress_thresh_ || !cmd_done) {
+                ref_pos = pos;
+                ref_time = clock::now();
+            } else if (std::chrono::duration<double>(clock::now() - ref_time).count() > progress_timeout_) {
+                // Command fully applied but gripper stopped short, e.g. blocked by an object.
+                finish(false, true, pos);
+                gh->succeed(result);
+                return;
+            }
+            next += period;
+            std::this_thread::sleep_until(next);
+        }
+        finish(false, false, 0.0);
     }
 
     void execute(std::shared_ptr<GoalHandle> gh)
@@ -482,6 +628,9 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr state_sub_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr desc_sub_;
     rclcpp_action::Server<FollowJT>::SharedPtr server_;
+    rclcpp_action::Server<GripperCmd>::SharedPtr gripper_server_;
+    size_t gripper_idx_{0};
+    Vec last_cmd_;  // guarded by mutex_
 };
 
 int main(int argc, char ** argv)

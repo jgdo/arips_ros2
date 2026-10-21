@@ -11,4 +11,4 @@ leader_teleop:
 
     # Float32: seconds teleoperation stays active; repeated messages reset the timer
     activate_topic: activate_leader_teleop
-    pose_topic: /servo_node/pose_target_cmds
+    pose_topic: /pose_servo/pose_target_cmds

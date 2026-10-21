@@ -13,6 +13,8 @@ joint_trajectory_server:
     progress_threshold: 0.002       # min position change counting as progress
     state_timeout: 0.3              # s, joint states older than this are considered stale
 
+    gripper_joint: "joint_door_gripper"   # must be one of `joints`
+    gripper_action_name: "/door_gripper_group_controller/door_gripper_cmd"
     action_name: "/arm_controller/follow_joint_trajectory"
     command_topic: "/arm_forward_position_controller/commands"
     joint_states_topic: "/joint_states"

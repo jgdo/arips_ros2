@@ -1,0 +1,10 @@
+pose_servo:
+  ros__parameters:
+    pose_topic: /pose_servo/pose_target_cmds
+    command_topic: /arm_forward_position_controller/commands
+    joint_states_topic: /joint_states
+    group_name: arm
+    link_name: door_gripper   # link represented by the received pose
+    ik_timeout: 0.05
+    # Command order; empty = active joints of the group
+    joint_names: ['']

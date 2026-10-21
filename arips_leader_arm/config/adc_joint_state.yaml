@@ -40,9 +40,9 @@ adc_joint_state:
         max_angle_deg: 90
       leader_joint_gripper:
         index: 4
-        low_adc: 100
-        low_angle_deg: -30
-        high_adc: 3500
-        high_angle_deg: 90
-        min_angle_deg: -30
-        max_angle_deg: 30
+        low_adc: 895
+        low_angle_deg: -90
+        high_adc: 2235
+        high_angle_deg: 0
+        min_angle_deg: -90
+        max_angle_deg: 0
