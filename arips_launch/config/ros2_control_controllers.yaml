@@ -10,7 +10,6 @@ controller_manager:
 
     kinect_forward_position_controller:
       type: forward_command_controller/ForwardCommandController
-      # type: joint_trajectory_controller/JointTrajectoryController
 
 arm_forward_position_controller:
   ros__parameters:

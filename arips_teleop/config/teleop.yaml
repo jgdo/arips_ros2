@@ -1,0 +1,16 @@
+teleop_node:
+  ros__parameters:
+    group_name: arm
+    link_name: link_3   # last link of the arm
+    # Joints sent in the command, in order; must include all joints of the group.
+    # Joints outside the group keep their current position.
+    joint_names: [joint_slider, joint_2, joint_3, joint_4, joint_door_gripper]
+    command_topic: /arm_forward_position_controller/commands
+    joint_states_topic: /joint_states
+    ik_timeout: 0.05
+    dt: 0.1
+    enable_button: 4
+    linear_axes: [3, -4, 1]
+    angular_axes: [-99, -99, 0]
+    linear_scale: 0.05
+    angular_scale: 1.0
