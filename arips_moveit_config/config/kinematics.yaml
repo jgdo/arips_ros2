@@ -6,5 +6,5 @@ arm:
   position_scale: 1.0
   rotation_scale: 0.1
   position_threshold: 0.0005
-  orientation_threshold: 0.001
+  orientation_threshold: 0.0005
   cost_threshold: 0.001

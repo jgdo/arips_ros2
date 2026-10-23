@@ -11,8 +11,8 @@ from std_msgs.msg import Float64MultiArray
 
 OWN_PARAMS = (
     'enable_button', 'command_topic', 'joint_states_topic', 'group_name', 'link_name',
-    'ik_timeout', 'dt', 'joint_names', 'linear_axes', 'angular_axes', 'linear_scale', 'angular_scale',
-    'use_sim_time',
+    'ik_timeout', 'command_rate', 'joy_timeout', 'joint_names', 'linear_axes', 'angular_axes',
+    'linear_scale', 'angular_scale', 'use_sim_time',
 )
 
 
@@ -46,14 +46,20 @@ def quaternion_from_rotation(r):
 class TeleopNode(Node):
     def __init__(self):
         super().__init__(
-            'teleop_node',
+            'arips_teleop',
             allow_undeclared_parameters=True,
             automatically_declare_parameters_from_overrides=True,
         )
         self.group_name = self._param('group_name', 'arm')
         self.link_name = self._param('link_name', 'link_3')
         self.ik_timeout = float(self._param('ik_timeout', 0.05))
-        self.dt = float(self._param('dt', 0.02))
+        self.command_rate = float(self._param('command_rate', 50.0))
+        self.joy_timeout = float(self._param('joy_timeout', 0.25))
+        if self.command_rate <= 0:
+            raise RuntimeError('command_rate must be positive')
+        self.dt = 1.0 / self.command_rate
+        self.last_joy = None
+        self.last_joy_time = None
         self._param('enable_button', 4)
         self._param('linear_axes', [4, 3, 1])
         self._param('angular_axes', [-1, -1, 0])
@@ -90,6 +96,7 @@ class TeleopNode(Node):
         self.pub = self.create_publisher(Float64MultiArray, command_topic, 10)
         self.create_subscription(JointState, joint_states_topic, self.on_joint_state, 10)
         self.create_subscription(Joy, '/joy', self.joy_callback, 10)
+        self.create_timer(self.dt, self.update)
         self.get_logger().info(
             f'Ready: group={self.group_name} link={self.link_name} joints={self.group_joints}')
 
@@ -113,8 +120,23 @@ class TeleopNode(Node):
         self.have_joint_state = True
 
     def joy_callback(self, msg):
+        self.last_joy = msg
+        self.last_joy_time = self.get_clock().now()
+        if not self._enabled(msg):
+            self.cached = None
+
+    def _enabled(self, msg):
         button = self.get_parameter('enable_button').value
-        if not (0 <= button < len(msg.buttons)) or not msg.buttons[button]:
+        return 0 <= button < len(msg.buttons) and bool(msg.buttons[button])
+
+    def update(self):
+        msg = self.last_joy
+        if msg is None or not self._enabled(msg):
+            return
+        age = (self.get_clock().now() - self.last_joy_time).nanoseconds * 1e-9
+        if age > self.joy_timeout:
+            self.get_logger().warning('Joy timeout; arm stopped', throttle_duration_sec=2.0)
+            # Re-sync from measured positions when joy messages resume
             self.cached = None
             return
         if not self.have_joint_state:
@@ -138,36 +160,54 @@ class TeleopNode(Node):
         a_s = self.get_parameter('angular_scale').value
         linear = np.array([ls * self._axis(msg, i) for i in lin]) * self.dt
         angular = np.array([a_s * self._axis(msg, i) for i in ang]) * self.dt
-        if not (linear.any() or angular.any()):
+        pose_commanded = bool(linear.any() or angular.any())
+        gripper_delta = (msg.axes[2]-msg.axes[5]) * a_s * self.dt
+        if not pose_commanded and not gripper_delta:
             return
-        
-        self.get_logger().info(f'Linear: {linear}, Angular: {angular}', throttle_duration_sec=0.5)
 
-        # Delta expressed in the end effector frame: T_target = T_current * T_delta
-        delta = np.eye(4)
-        delta[:3, :3] = rotation_from_vector(angular)
-        delta[:3, 3] = linear
-        target = np.array(self.state.get_global_link_transform(self.link_name)) @ delta
+        if pose_commanded:
+            self.get_logger().info(
+                f'Linear: {linear}, Angular: {angular}', throttle_duration_sec=0.5)
 
-        pose = Pose()
-        pose.position.x, pose.position.y, pose.position.z = (float(v) for v in target[:3, 3])
-        (pose.orientation.x, pose.orientation.y,
-         pose.orientation.z, pose.orientation.w) = (
-            float(v) for v in quaternion_from_rotation(target[:3, :3]))
-        if not self.state.set_from_ik(self.group_name, pose, self.link_name, self.ik_timeout):
-            self.get_logger().warning('IK failed; no command sent', throttle_duration_sec=1.0)
-            self.state.set_joint_group_positions(
-                self.group_name, [self.cached[j] for j in self.group_joints])
-            self.state.update()
+            # Delta expressed in the end effector frame: T_target = T_current * T_delta
+            delta = np.eye(4)
+            delta[:3, :3] = rotation_from_vector(angular)
+            delta[:3, 3] = linear
+            target = np.array(self.state.get_global_link_transform(self.link_name)) @ delta
+
+            pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = (
+                float(v) for v in target[:3, 3])
+            (pose.orientation.x, pose.orientation.y,
+             pose.orientation.z, pose.orientation.w) = (
+                float(v) for v in quaternion_from_rotation(target[:3, :3]))
+            if not self.state.set_from_ik(
+                    self.group_name, pose, self.link_name, self.ik_timeout):
+                self.get_logger().warning('IK failed; pose command not sent',
+                                          throttle_duration_sec=1.0)
+                self.state.set_joint_group_positions(
+                    self.group_name, [self.cached[j] for j in self.group_joints])
+                self.state.update()
+                pose_commanded = False
+            else:
+                self.state.update()
+
+                positions = dict(zip(
+                    self.group_joints, self.state.get_joint_group_positions(self.group_name)))
+                self.get_logger().info(
+                    f'Joint4 moving from {self.cached["joint_4"]} to {positions["joint_4"]}',
+                    throttle_duration_sec=0.5)
+                self.cached.update(positions)
+
+        if gripper_delta:
+            self.get_logger().info(
+                                f'gripper moving  {self.cached["joint_door_gripper"]} with delta {gripper_delta}', throttle_duration_sec=0.5)
+            self.cached['joint_door_gripper'] += gripper_delta
+
+        if not pose_commanded and not gripper_delta:
             return
-        self.state.update()
-        
 
         out = Float64MultiArray()
-        positions = dict(zip(
-            self.group_joints, self.state.get_joint_group_positions(self.group_name)))
-        self.get_logger().info(f'Joint4 moving from {self.cached["joint_4"]} to {positions["joint_4"]}', throttle_duration_sec=0.5)
-        self.cached.update(positions)
         # Joints outside the planning group keep their position from button press
         out.data = [float(self.cached[j]) for j in self.joint_names]
         self.pub.publish(out)
