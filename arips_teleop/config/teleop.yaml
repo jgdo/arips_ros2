@@ -1,13 +1,11 @@
 arips_teleop:
   ros__parameters:
-    group_name: arm
-    link_name: link_3   # last link of the arm
-    # Joints sent in the command, in order; must include all joints of the group.
-    # Joints outside the group keep their current position.
+    link_name: link_3   # last link of the arm (SCARA chain base_link -> link_3 is validated)
+    # Joints sent in the command, in order; must include joint_slider, joint_2, joint_3, joint_4.
+    # Joints outside the arm keep their current position.
     joint_names: [joint_slider, joint_2, joint_3, joint_4, joint_door_gripper]
     command_topic: /arm_forward_position_controller/commands
     joint_states_topic: /joint_states
-    ik_timeout: 0.05
     command_rate: 20.0   # Hz, rate of joint commands while the enable button is held
     joy_timeout: 0.2     # s, stop the arm if no joy message arrives for this long
     enable_button: 4

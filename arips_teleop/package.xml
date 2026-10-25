@@ -3,7 +3,7 @@
 <package format="3">
   <name>arips_teleop</name>
   <version>0.0.1</version>
-  <description>Joystick teleoperation computing joint position commands via MoveIt IK</description>
+  <description>Joystick teleoperation computing joint position commands via analytic SCARA IK</description>
   <maintainer email="user@example.com">user</maintainer>
   <license>Apache-2.0</license>
 
@@ -13,10 +13,10 @@
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
   <depend>rosetta_interfaces</depend>
-  <depend>moveit_py</depend>
-  <depend>moveit_configs_utils</depend>
-  <depend>arips_moveit_config</depend>
+  <depend>urdfdom_py</depend>
   <depend>arips_description</depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
