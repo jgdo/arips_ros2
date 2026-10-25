@@ -52,8 +52,10 @@ RUN apt-get update && apt-get upgrade -y \
         ros-${ROS_DISTRO}-pick-ik \
         ros-${ROS_DISTRO}-moveit-servo \
         ros-${ROS_DISTRO}-moveit-py \
-        ros-${ROS_DISTRO}-compressed-depth-image-transport 
+        ros-${ROS_DISTRO}-rosbag2-storage-mcap 
     && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && sudo apt install -y $(apt-cache search --names-only "^ros-${ROS_DISTRO}-.*-image-transport$" | awk '{print $1}') && rm -rf /var/lib/apt/lists/*
 
 ENV SETUP_BASH=/opt/ros/${ROS_DISTRO}/setup.bash
 RUN echo "source $SETUP_BASH" >> /home/$USERNAME/.bashrc

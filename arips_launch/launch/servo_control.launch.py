@@ -17,6 +17,7 @@ def generate_launch_description():
     baud_rate = LaunchConfiguration('baud_rate')
     arm_enabled = LaunchConfiguration('arm_enabled')
     kinect_enabled = LaunchConfiguration('kinect_enabled')
+    enable_mock_mode = LaunchConfiguration('enable_mock_mode')
 
     xacro_file = os.path.join(
         get_package_share_directory('arips_description'), 'urdf', 'arips_onshape.urdf.xacro'
@@ -32,6 +33,7 @@ def generate_launch_description():
         ' baud_rate:=', baud_rate,
         ' arm_enabled:=', arm_enabled,
         ' kinect_enabled:=', kinect_enabled,
+        ' enable_mock_mode:=', enable_mock_mode,
     ])
 
     return LaunchDescription([
@@ -55,6 +57,11 @@ def generate_launch_description():
             'kinect_enabled',
             default_value='true',
             description='Spawn the kinect_forward_position_controller',
+        ),
+        DeclareLaunchArgument(
+            'enable_mock_mode',
+            default_value='false',
+            description='Run the STS hardware interface in mock mode (simulation, no servo hardware)',
         ),
 
         # publish robot_description as a latched string topic, without the

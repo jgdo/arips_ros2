@@ -71,14 +71,10 @@ Visualization Manager:
         All Enabled: false
         alu:
           Value: false
-        arips_wheel_center:
-          Value: true
         base_link:
           Value: false
         door_gripper:
           Value: true
-        kinect_link:
-          Value: false
         kinect_mount:
           Value: false
         left_wheel:
@@ -99,21 +95,19 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        arips_wheel_center:
-          base_link:
-            kinect_mount:
-              kinect_link:
+        base_link:
+          kinect_mount:
+            {}
+          left_wheel:
+            right_wheel:
+              alu:
                 {}
-            left_wheel:
-              right_wheel:
-                alu:
-                  {}
-            link_0:
-              link_1:
-                link_2:
-                  link_3:
-                    door_gripper:
-                      {}
+          link_0:
+            link_1:
+              link_2:
+                link_3:
+                  door_gripper:
+                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -924,6 +918,7 @@ Visualization Manager:
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
@@ -946,10 +941,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.43539872765541077
+      Pitch: 0.26539888978004456
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz_default_plugins)
-      Yaw: 1.060401201248169
+      Yaw: 0.6054016351699829
     Saved: ~
 Window Geometry:
   Camera:

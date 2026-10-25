@@ -83,7 +83,7 @@ class TeleopNode(Node):
         if group is None:
             raise RuntimeError(f'unknown joint group {self.group_name}')
         self.group_joints = list(group.active_joint_model_names)
-        self.joint_names = list(self._param('joint_names', self.group_joints))
+        self.joint_names = list(self._param('joint_names', []))
         missing = [j for j in self.group_joints if j not in self.joint_names]
         if missing:
             raise RuntimeError(f'joint_names must contain all joints of the group: missing {missing}')
@@ -210,6 +210,7 @@ class TeleopNode(Node):
         out = Float64MultiArray()
         # Joints outside the planning group keep their position from button press
         out.data = [float(self.cached[j]) for j in self.joint_names]
+        
         self.pub.publish(out)
 
 

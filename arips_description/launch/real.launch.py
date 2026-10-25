@@ -21,6 +21,7 @@ def generate_launch_description():
             name='robot_state_publisher',
             parameters=[{
                 'robot_description': ParameterValue(Command(['xacro ', urdf_file]), value_type=str),
+                'rate': 100
             }],
             output='screen',
         ),

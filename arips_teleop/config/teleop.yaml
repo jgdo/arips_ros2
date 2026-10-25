@@ -1,4 +1,4 @@
-teleop_node:
+arips_teleop:
   ros__parameters:
     group_name: arm
     link_name: link_3   # last link of the arm

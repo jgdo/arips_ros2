@@ -1,0 +1,23 @@
+robot_type: arips_arm_door
+robot_interface: ros2
+fps: 30
+
+observations:
+  observation.images.kinect:
+    channel: {topic: /kinect/rgb/image_raw/compressed, type: sensor_msgs/msg/CompressedImage}
+    align: {strategy: hold, timeline: header}
+    apply: [resize: [480, 640]]
+
+  observation.state:
+    channel: {topic: /feetech_joint_state_broadcaster/joint_states, type: sensor_msgs/msg/JointState}
+    align: {strategy: hold, timeline: header}
+    select: [position.joint_slider, position.joint_2, position.joint_3,
+             position.joint_4, position.joint_door_gripper]
+
+actions:
+  action:
+    channel: {topic: /arm_forward_position_controller/commands,
+              type: std_msgs/msg/Float64MultiArray, safety: none}
+    align: {strategy: hold, timeline: receive}
+    select: [joint_slider.pos, joint_2.pos, joint_3.pos, joint_4.pos, joint_door_gripper.pos]
+  

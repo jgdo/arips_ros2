@@ -24,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'teleop_node = arips_teleop.teleop_node:main',
+            'record_control = arips_teleop.record_control:main',
         ],
     },
 )

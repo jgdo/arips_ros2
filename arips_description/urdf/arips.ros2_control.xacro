@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:macro name="ros2_control_arips" params="serial_port baud_rate arm_enabled kinect_enabled">
+    <xacro:macro name="ros2_control_arips" params="serial_port baud_rate arm_enabled kinect_enabled enable_mock_mode">
         <ros2_control name="arips_servos" type="system">
             <hardware>
                 <plugin>sts_hardware_interface/STSHardwareInterface</plugin>
@@ -11,7 +11,7 @@
 
                 <param name="communication_timeout_ms">20</param>  <!-- Serial timeout: 1-1000 ms (default: 100) -->
                 <param name="use_sync_write">true</param>  <!-- Enable SyncWrite for multi-motor chains (default: true) -->
-                <param name="enable_mock_mode">false</param>  <!-- Simulation mode without hardware (default: false) -->
+                <param name="enable_mock_mode">${enable_mock_mode}</param>
                 <param name="reset_states_on_activate">"false"</param>  <!-- Reset position/velocity to zero on activation (default: true) -->
             </hardware>
             <xacro:if value="${kinect_enabled}">

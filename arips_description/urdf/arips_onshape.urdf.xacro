@@ -5,6 +5,7 @@
     <xacro:arg name="baud_rate" default="500000" />
     <xacro:arg name="arm_enabled" default="true" />
     <xacro:arg name="kinect_enabled" default="true" />
+    <xacro:arg name="enable_mock_mode" default="false" />
     <xacro:include filename="$(find arips_description)/urdf/arips.ros2_control.xacro" />
     <link name="alu">
         <inertial>
@@ -287,6 +288,6 @@
     </joint>
 
     <xacro:if value="$(arg use_ros2_control)">
-        <xacro:ros2_control_arips serial_port="$(arg serial_port)" baud_rate="$(arg baud_rate)" arm_enabled="$(arg arm_enabled)" kinect_enabled="$(arg kinect_enabled)" />
+        <xacro:ros2_control_arips serial_port="$(arg serial_port)" baud_rate="$(arg baud_rate)" arm_enabled="$(arg arm_enabled)" kinect_enabled="$(arg kinect_enabled)" enable_mock_mode="'$(arg enable_mock_mode)'" />
     </xacro:if>
 </robot>
