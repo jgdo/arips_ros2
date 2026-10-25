@@ -1,17 +1,18 @@
 from math import copysign, cos, sin
 
 import rclpy
+from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node
 from sensor_msgs.msg import Joy, JointState
 from std_msgs.msg import Float64MultiArray
 
-from arips_teleop.scara_kinematics import IKError, ScaraKinematics
+from arips_teleop.scara_kinematics import IKError, ScaraKinematics, wrap_angle
 
 
 class TeleopNode(Node):
     def __init__(self):
         super().__init__(
-            'arips_teleop',
+            'arips_arm_teleop',
             allow_undeclared_parameters=True,
             automatically_declare_parameters_from_overrides=True,
         )
@@ -44,9 +45,13 @@ class TeleopNode(Node):
         self.latest = {}
         # Commanded joint targets, cached when the enable button is pressed
         self.cached = None
+        # Target tip pose (x, y, z, yaw) in base_link; deltas are added to it, not to the joints
+        self.target = None
+        self.max_deviation = float(self._param('max_position_deviation', 0.02))
         self.have_joint_state = False
 
         self.pub = self.create_publisher(Float64MultiArray, command_topic, 10)
+        self.target_pose_pub = self.create_publisher(PoseStamped, 'teleop_target_position', 10)
         self.create_subscription(JointState, joint_states_topic, self.on_joint_state, 10)
         self.create_subscription(Joy, '/joy', self.joy_callback, 10)
         self.create_timer(self.dt, self.update)
@@ -73,6 +78,7 @@ class TeleopNode(Node):
         self.last_joy_time = self.get_clock().now()
         if not self._enabled(msg):
             self.cached = None
+            self.target = None
 
     def _enabled(self, msg):
         button = self.get_parameter('enable_button').value
@@ -87,6 +93,7 @@ class TeleopNode(Node):
             self.get_logger().warning('Joy timeout; arm stopped', throttle_duration_sec=2.0)
             # Re-sync from measured positions when joy messages resume
             self.cached = None
+            self.target = None
             return
         if not self.have_joint_state:
             self.get_logger().warning('No joint state received yet', throttle_duration_sec=2.0)
@@ -99,7 +106,7 @@ class TeleopNode(Node):
             # Button just pressed: start from the measured position, then integrate commands
             # on top of the cached target instead of the noisy measurements
             self.cached = dict(self.latest)
-
+            self.target = self.kinematics.fk(self.cached)
         lin = self.get_parameter('linear_axes').value
         ang = self.get_parameter('angular_axes').value
         ls = self.get_parameter('linear_scale').value
@@ -116,19 +123,28 @@ class TeleopNode(Node):
             self.get_logger().info(
                 f'Linear: {linear}, Yaw: {yaw_delta}', throttle_duration_sec=0.5)
 
-            x, y, z, yaw = self.kinematics.fk(self.cached)
-            # Linear delta is expressed in the tip link frame, z is parallel to base z
+            x, y, z, yaw = self.target
+            # Linear delta is expressed in the target frame, z is parallel to base z
             dx = linear[0] * cos(yaw) - linear[1] * sin(yaw)
             dy = linear[0] * sin(yaw) + linear[1] * cos(yaw)
+            new_target = (x + dx, y + dy, z + linear[2], wrap_angle(yaw + yaw_delta))
             try:
-                positions = self.kinematics.ik(
-                    x + dx, y + dy, z + linear[2], yaw + yaw_delta)
+                positions, error = self.kinematics.ik_closest(*new_target)
             except IKError as exc:
                 self.get_logger().warning(f'IK failed ({exc}); pose command not sent',
                                           throttle_duration_sec=1.0)
                 pose_commanded = False
             else:
-                self.cached.update(positions)
+                if error > self.max_deviation:
+                    # Target stays where it was, so it cannot wind up beyond the workspace
+                    self.get_logger().warning(
+                        f'Closest reachable pose is {error:.3f} m from the target '
+                        f'(max {self.max_deviation} m); arm not moved',
+                        throttle_duration_sec=1.0)
+                    pose_commanded = False
+                else:
+                    self.target = new_target
+                    self.cached.update(positions)
 
         if gripper_delta:
             self.get_logger().info(
@@ -143,6 +159,16 @@ class TeleopNode(Node):
         out.data = [float(self.cached[j]) for j in self.joint_names]
 
         self.pub.publish(out)
+
+        target_pose = PoseStamped()
+        target_pose.header.stamp = self.get_clock().now().to_msg()
+        target_pose.header.frame_id = self.kinematics.base_link
+        target_pose.pose.position.x = float(self.target[0])
+        target_pose.pose.position.y = float(self.target[1])
+        target_pose.pose.position.z = float(self.target[2])
+        target_pose.pose.orientation.z = sin(self.target[3] / 2.0)
+        target_pose.pose.orientation.w = cos(self.target[3] / 2.0)
+        self.target_pose_pub.publish(target_pose)
 
 
 def main(args=None):

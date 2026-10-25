@@ -171,3 +171,69 @@ class ScaraKinematics:
             if value < lo - 1e-9 or value > hi + 1e-9:
                 raise IKError(f'{name}={value:.3f} outside limits [{lo:.3f}, {hi:.3f}]')
         return q
+
+    def _nearest_in_limits(self, name, value):
+        lo, hi = self.limits[name]
+        if lo <= value <= hi:
+            return value
+        # Angular distance, so a value just beyond +pi is close to the lower limit
+        if abs(wrap_angle(value - lo)) <= abs(wrap_angle(value - hi)):
+            return lo
+        return hi
+
+    def ik_closest(self, x, y, z, yaw, samples=360):
+        """Like ik(), but if the pose is not reachable return the closest joint configuration.
+
+        The configuration minimizes the xyz distance to the target, using the elbow side chosen
+        by the q3 sign rule. The yaw is realised as well as the joint limits allow.
+        Returns (joint positions, position error in m).
+        """
+        try:
+            return self.ik(x, y, z, yaw), 0.0
+        except IKError:
+            pass
+
+        s = self.axis_sign
+        px, py = self._joint_2_position()
+        tx, ty = x - px, y - py
+        a, b = self.link1, self.link2
+        lo3, hi3 = self.limits[JOINT_3]
+        if -math.sin(yaw) <= 0:
+            lo3, hi3 = max(lo3, 0.0), hi3
+        else:
+            lo3, hi3 = lo3, min(hi3, 0.0)
+
+        candidates = [lo3 + (hi3 - lo3) * i / samples for i in range(samples + 1)]
+        # Reach along the radius towards the target, clamped to what the links can do
+        cos_b = max(-1.0, min(1.0, (tx * tx + ty * ty - a * a - b * b) / (2 * a * b)))
+        for beta in (math.acos(cos_b), -math.acos(cos_b)):
+            q3 = wrap_angle(s[JOINT_3] * (beta - self.yaw3))
+            if lo3 <= q3 <= hi3:
+                candidates.append(q3)
+
+        best = None
+        for q3 in candidates:
+            beta = self.yaw3 + s[JOINT_3] * q3
+            wx, wy = a + b * math.cos(beta), b * math.sin(beta)
+            if math.hypot(wx, wy) < 1e-12:
+                continue
+            phi1 = math.atan2(ty, tx) - math.atan2(wy, wx)
+            q2 = self._nearest_in_limits(
+                JOINT_2, wrap_angle(s[JOINT_2] * (phi1 - self.yaw0 - self.yaw2)))
+            phi1 = self.yaw0 + self.yaw2 + s[JOINT_2] * q2
+            rx, ry = _rot(phi1, wx, wy)
+            err = math.hypot(tx - rx, ty - ry)
+            if best is None or err < best[0]:
+                best = (err, q2, q3)
+        if best is None:
+            raise IKError('no joint configuration found')
+        err_xy, q2, q3 = best
+
+        lo1, hi1 = self.limits[SLIDER]
+        q1 = max(lo1, min(hi1, z - self.z_offset))
+        err_z = (z - self.z_offset) - q1
+        phi2 = (self.yaw0 + self.yaw2 + s[JOINT_2] * q2) + self.yaw3 + s[JOINT_3] * q3
+        q4 = self._nearest_in_limits(
+            JOINT_4, wrap_angle(s[JOINT_4] * (yaw - phi2 - self.yaw4)))
+        q = {SLIDER: q1, JOINT_2: q2, JOINT_3: q3, JOINT_4: q4}
+        return q, math.hypot(err_xy, err_z)

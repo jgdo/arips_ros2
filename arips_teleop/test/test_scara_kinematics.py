@@ -82,6 +82,43 @@ def test_joint_limit_rejected(kin):
         kin.ik(0.14, -0.3, 5.0, 0.0)
 
 
+def test_closest_reports_true_error(kin):
+    rng = random.Random(2)
+    for _ in range(200):
+        target = (rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.2, 1.2),
+                  rng.uniform(-math.pi, math.pi))
+        q, err = kin.ik_closest(*target)
+        x, y, z, _ = kin.fk(q)
+        assert math.dist((x, y, z), target[:3]) == pytest.approx(err, abs=1e-9)
+        for name, value in q.items():
+            lo, hi = kin.limits[name]
+            assert lo - 1e-9 <= value <= hi + 1e-9
+
+
+def test_closest_is_exact_when_reachable(kin):
+    q = {SLIDER: 0.3, JOINT_2: 0.4, JOINT_3: -0.9, JOINT_4: 0.2}
+    pose = kin.fk(q)
+    sol, err = kin.ik_closest(*pose)
+    assert err == 0.0
+    assert kin.fk(sol)[:3] == pytest.approx(pose[:3], abs=1e-9)
+
+
+def test_closest_beats_grid_search(kin):
+    target = (0.1, -0.9, 0.5, 0.0)  # beyond reach
+    _, err = kin.ik_closest(*target)
+    px, py = kin._joint_2_position()
+    best = float('inf')
+    lo2, hi2 = kin.limits[JOINT_2]
+    lo3, hi3 = kin.limits[JOINT_3]
+    for i in range(201):
+        for j in range(201):
+            q = {SLIDER: 0.2, JOINT_2: lo2 + (hi2 - lo2) * i / 200,
+                 JOINT_3: lo3 + (hi3 - lo3) * j / 200, JOINT_4: 0.0}
+            x, y, _, _ = kin.fk(q)
+            best = min(best, math.hypot(x - target[0], y - target[1]))
+    assert err <= best + 2e-3
+
+
 @pytest.mark.parametrize('old, new', [
     ('name="joint_2" type="revolute"', 'name="joint_2" type="fixed"'),
     ('<axis xyz="0 0 -1"/>', '<axis xyz="0 1 0"/>'),

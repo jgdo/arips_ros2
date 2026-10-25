@@ -250,21 +250,21 @@
         <axis xyz="0 0 1" />
         <parent link="link_0" />
         <child link="link_1" />
-        <limit effort="1" velocity="1" lower="-2.26893" upper="2.26893" />
+        <limit effort="1" velocity="2" lower="-2.26893" upper="2.26893" />
     </joint>
     <joint name="joint_3" type="revolute">
         <origin xyz="-0.17 5.55112e-17 0" rpy="-2.75035e-20 -8.55668e-20 1.98448e-30" />
         <axis xyz="0 0 1" />
         <parent link="link_1" />
         <child link="link_2" />
-        <limit effort="1" velocity="1" lower="-2.44346" upper="2.44346" />
+        <limit effort="1" velocity="2" lower="-2.44346" upper="2.44346" />
     </joint>
     <joint name="joint_4" type="revolute">
         <origin xyz="-0.15 -3.33067e-16 -0.0516" rpy="1.35577e-20 5.59002e-22 -1.5708" />
         <axis xyz="-0 -0 -1" />
         <parent link="link_2" />
         <child link="link_3" />
-        <limit effort="1" velocity="1" lower="-2.0944" upper="2.0944" />
+        <limit effort="1" velocity="2" lower="-2.44346" upper="2.44346" />
     </joint>
     <joint name="joint_door_gripper" type="continuous">
         <origin xyz="-2.77556e-16 -0.0533 -0.0248" rpy="1.39607e-20 -5.75927e-18 -9.86077e-32" />
@@ -277,7 +277,7 @@
         <axis xyz="0 0 1" />
         <parent link="base_link" />
         <child link="link_0" />
-        <limit effort="1" velocity="1" lower="0.0" upper="0.871" />
+        <limit effort="1" velocity="0.2" lower="0.0" upper="0.871" />
     </joint>
     <joint name="kinect_joint" type="revolute">
         <origin xyz="0.14 -0.005 1.4114" rpy="0 -0 0" />

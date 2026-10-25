@@ -16,7 +16,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='arips_teleop',
-            executable='teleop_node',
+            executable='arm_teleop_node',
             output='screen',
             parameters=[
                 {'robot_description': ParameterValue(
