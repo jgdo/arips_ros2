@@ -27,4 +27,13 @@ def generate_launch_description():
                 'config_filepath': config_filepath,
             }.items(),
         ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('arips_teleop'),
+                    'launch',
+                    'teleop.launch.py',
+                ])
+            )
+        ),
     ])

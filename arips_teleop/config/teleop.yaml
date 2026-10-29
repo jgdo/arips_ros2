@@ -15,3 +15,10 @@ arips_arm_teleop:
     angular_axes: [-99, -99, 3]
     linear_scale: 0.1
     angular_scale: 1.0
+    kinect_joint: kinect_joint
+    kinect_command_topic: /kinect_forward_position_controller/commands
+    kinect_up_button: 11     # increases the kinect angle, works without enable_button
+    kinect_down_button: 12   # decreases the kinect angle
+    kinect_rate: 0.5         # rad/s while the button is held
+    kinect_min: -1.65806     # rad, URDF limits
+    kinect_max: 0.5236

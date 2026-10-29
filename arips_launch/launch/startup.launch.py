@@ -49,6 +49,7 @@ def generate_launch_description():
             arguments=['--x', '-0.1', '--y', '0', '--z', '0',
                         '--roll', '0', '--pitch', '0', '--yaw', '0',
                         '--frame-id', 'arips_wheel_center', '--child-frame-id', 'base_link'],
+            output='screen',
         ),
         
         Node(package='tf2_ros',
@@ -57,16 +58,25 @@ def generate_launch_description():
             arguments=['--x', '-0.025', '--y', '0', '--z', '0.03',
                         '--roll', '0', '--pitch', '0', '--yaw', '-1.57079632679',
                         '--frame-id', 'kinect_mount', '--child-frame-id', 'kinect_link'],
+            output='screen',
         ),
 
         Node(package='arips_serial_bridge',
              executable='serial_node',
              name='serial_node',
+             output='screen',
         ),
 
         Node(package='laptop_battery_monitor',
              executable='battery_node',
              name='laptop_battery_node',
              remappings=[('/battery_state', '/laptop_battery_state')],
+             output='screen'
+        ),
+
+        Node(package='arips_voice_interface',
+             executable='arips_say',
+             name='arips_say',
+             output='screen'
         ),
     ])
