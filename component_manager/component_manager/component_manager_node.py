@@ -28,6 +28,8 @@ class ComponentConfig:
     package: str
     file: str
     dependencies: list[str]
+    # Launch arguments passed to the included launch file
+    arguments: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -97,6 +99,7 @@ class ComponentManagerNode(Node):
                     package=cfg['package'],
                     file=cfg['file'],
                     dependencies=cfg.get('dependencies', []),
+                    arguments={str(k): str(v) for k, v in cfg.get('arguments', {}).items()},
                 ),
                 log=deque(maxlen=self._log_line_limit),
             )
@@ -170,7 +173,8 @@ class ComponentManagerNode(Node):
     # ── Launch helpers ──────────────────────────────────────────────
 
     @staticmethod
-    def _run_launch(package: str, launch_file: str, log_write_fd) -> None:
+    def _run_launch(package: str, launch_file: str, arguments: dict[str, str],
+                    log_write_fd) -> None:
         """Entry point for the child process. Runs a LaunchService."""
         if not isinstance(log_write_fd, int):
             log_write_fd = log_write_fd.detach()
@@ -197,6 +201,7 @@ class ComponentManagerNode(Node):
         ld = LaunchDescription([
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(path),
+                launch_arguments=arguments.items(),
             ),
         ])
 
@@ -223,7 +228,7 @@ class ComponentManagerNode(Node):
 
         proc = mp_context.Process(
             target=self._run_launch,
-            args=(cfg.package, cfg.file, child_log_write_fd),
+            args=(cfg.package, cfg.file, cfg.arguments, child_log_write_fd),
             name=f'launch-{name}',
             daemon=True,
         )

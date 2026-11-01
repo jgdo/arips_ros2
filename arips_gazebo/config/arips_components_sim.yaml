@@ -1,0 +1,24 @@
+# Component manager config for the Gazebo simulation.
+# base_power, kinect, servos and lidar are left out: the simulation provides them.
+# shutdown is left out as well, it would power off the host.
+components:
+  xbox_teleop:
+    package: arips_launch
+    file: launch/teleop_xbox.launch.py
+    dependencies: []
+  arm_teleop:
+    package: arips_teleop
+    file: launch/teleop.launch.py
+    dependencies: [xbox_teleop]
+  localization:
+    package: arips_launch
+    file: launch/localization.launch.py
+    dependencies: []
+    arguments:
+      use_sim_time: 'true'
+  full_navigation:
+    package: arips_launch
+    file: launch/nav2.launch.py
+    dependencies: [localization]
+    arguments:
+      use_sim_time: 'true'

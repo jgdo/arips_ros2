@@ -220,7 +220,8 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 <script>
 (function() {
   // ── ROS connection ───────────────────────────────────────────
-  var wsUrl = 'ws://arips:9090';
+  // rosbridge runs next to the web server, on the robot or on the simulation host
+  var wsUrl = 'ws://' + (window.location.hostname || 'arips') + ':9090';
   var ros = new ROSLIB.Ros({ url: wsUrl });
   var reconnectIntervalMs = 500;
   var connectionAttemptInProgress = true;
