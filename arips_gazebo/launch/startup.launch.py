@@ -36,7 +36,8 @@ def generate_launch_description():
                 'launch',
                 'dashboard.launch.py',
             ])
-        )
+        ),
+        launch_arguments={'port': '8282'}.items(),
     )
 
     return LaunchDescription([

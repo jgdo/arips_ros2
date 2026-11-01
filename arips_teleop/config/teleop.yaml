@@ -17,8 +17,9 @@ arips_arm_teleop:
     angular_scale: 1.0
     kinect_joint: kinect_joint
     kinect_command_topic: /kinect_forward_position_controller/commands
-    kinect_up_button: 11     # increases the kinect angle, works without enable_button
-    kinect_down_button: 12   # decreases the kinect angle
-    kinect_rate: 0.5         # rad/s while the button is held
+    # kinect_up_button / kinect_down_button ('buttonN', 'axisN' or '-axisN') are set by the
+    # launch arguments of the same name (default button11 / button12); they work without
+    # enable_button. Not set here, as this file would take precedence over the launch arguments.
+    kinect_rate: 0.5         # rad/s at full button/axis input
     kinect_min: -1.65806     # rad, URDF limits
     kinect_max: 0.5236

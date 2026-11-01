@@ -34,9 +34,10 @@ class TeleopNode(Node):
         self.kinect_joint = self._param('kinect_joint', 'kinect_joint')
         kinect_topic = self._param('kinect_command_topic',
                                    '/kinect_forward_position_controller/commands')
-        self._param('kinect_up_button', 11)
-        self._param('kinect_down_button', 12)
-        self._param('kinect_rate', 0.5)  # rad/s while a button is held
+        # Joy inputs as 'buttonN', 'axisN' or '-axisN' (reversed axis)
+        self._param('kinect_up_button', 'button11')
+        self._param('kinect_down_button', 'button12')
+        self._param('kinect_rate', 0.5)  # rad/s at full input
         self._param('kinect_min', -1.65806)
         self._param('kinect_max', 0.5236)
         joint_states_topic = self._param('joint_states_topic', '/joint_states')
@@ -59,7 +60,7 @@ class TeleopNode(Node):
         self.max_deviation = float(self._param('max_position_deviation', 0.02))
         self.have_joint_state = False
         self.kinect_measured = None
-        # Commanded kinect angle, cached while button 11/12 is held
+        # Commanded kinect angle, cached while a kinect input is active
         self.kinect_cached = None
 
         self.pub = self.create_publisher(Float64MultiArray, command_topic, 10)
@@ -99,18 +100,42 @@ class TeleopNode(Node):
         button = self.get_parameter('enable_button').value
         return 0 <= button < len(msg.buttons) and bool(msg.buttons[button])
 
-    def _button(self, msg, name):
-        button = self.get_parameter(name).value
-        return 0 <= button < len(msg.buttons) and bool(msg.buttons[button])
+    def _input(self, msg, name):
+        """Value in [0, 1] of the joy input named by parameter `name`.
+
+        The parameter is 'buttonN', 'axisN' or '-axisN'; a plain integer is a button index.
+        Axes only count in their positive direction ('-axisN' reverses it).
+        """
+        spec = str(self.get_parameter(name).value).strip()
+        sign = 1.0
+        if spec.startswith('-'):
+            sign = -1.0
+            spec = spec[1:]
+        try:
+            if spec.startswith('button'):
+                idx = int(spec[len('button'):])
+                return float(0 <= idx < len(msg.buttons) and bool(msg.buttons[idx]))
+            if spec.startswith('axis'):
+                idx = int(spec[len('axis'):])
+                if 0 <= idx < len(msg.axes):
+                    return min(max(sign * float(msg.axes[idx]), 0.0), 1.0)
+                return 0.0
+            idx = int(spec)
+            return float(0 <= idx < len(msg.buttons) and bool(msg.buttons[idx]))
+        except ValueError:
+            self.get_logger().error(
+                f'Invalid {name} "{self.get_parameter(name).value}", '
+                'expected buttonN, axisN or -axisN', throttle_duration_sec=5.0)
+            return 0.0
 
     def update_kinect(self):
         msg = self.last_joy
-        direction = 0
+        direction = 0.0
         if msg is not None:
             age = (self.get_clock().now() - self.last_joy_time).nanoseconds * 1e-9
             if age <= self.joy_timeout:
-                direction = (int(self._button(msg, 'kinect_up_button'))
-                             - int(self._button(msg, 'kinect_down_button')))
+                direction = (self._input(msg, 'kinect_up_button')
+                             - self._input(msg, 'kinect_down_button'))
         if direction == 0:
             # Re-sync from the measured angle on the next press
             self.kinect_cached = None

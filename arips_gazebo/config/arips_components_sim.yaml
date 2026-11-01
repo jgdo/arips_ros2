@@ -10,6 +10,10 @@ components:
     package: arips_teleop
     file: launch/teleop.launch.py
     dependencies: [xbox_teleop]
+    arguments:
+      # Kinect tilt on the d-pad vertical axis instead of buttons 11/12
+      kinect_up_button: 'axis7'
+      kinect_down_button: '-axis7'
   localization:
     package: arips_launch
     file: launch/localization.launch.py

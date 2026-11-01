@@ -52,7 +52,8 @@ RUN apt-get update && apt-get upgrade -y \
         ros-${ROS_DISTRO}-pick-ik \
         ros-${ROS_DISTRO}-moveit-servo \
         ros-${ROS_DISTRO}-moveit-py \
-        ros-${ROS_DISTRO}-rosbag2-storage-mcap 
+        ros-${ROS_DISTRO}-rosbag2-storage-mcap \
+        ros-${ROS_DISTRO}-teleop-twist-joy 
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && sudo apt install -y $(apt-cache search --names-only "^ros-${ROS_DISTRO}-.*-image-transport$" | awk '{print $1}') && rm -rf /var/lib/apt/lists/*
@@ -91,10 +92,6 @@ WORKDIR /home/$USERNAME/colcon_ws
 FROM base AS robot
 
 ARG USERNAME=rosuser
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ros-${ROS_DISTRO}-teleop-twist-joy \
-    && rm -rf /var/lib/apt/lists/*
 
 USER $USERNAME
 
