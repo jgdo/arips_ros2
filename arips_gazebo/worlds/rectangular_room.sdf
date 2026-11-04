@@ -15,7 +15,7 @@
     </plugin>
 
     <scene>
-      <ambient>0.6 0.6 0.6 1</ambient>
+      <ambient>0.8 0.8 0.8 1</ambient>
       <background>0.7 0.7 0.7 1</background>
       <grid>false</grid>
     </scene>
@@ -25,7 +25,7 @@
       <pose>0 0 10 0 0 0</pose>
       <diffuse>0.8 0.8 0.8 1</diffuse>
       <specular>0.2 0.2 0.2 1</specular>
-      <direction>-0.5 0.1 -0.9</direction>
+      <direction>0.5 0.1 -0.9</direction>
     </light>
 
     <model name="ground_plane">
@@ -108,6 +108,25 @@
             <ambient>0.7 0.8 0.9 1</ambient>
             <diffuse>0.7 0.8 0.9 1</diffuse>
           </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Closed door centred on the inside of the east wall, handle towards the room.
+         The mesh spans x 0..0.05 (handle side +x), y -0.062..0.916 and z 0..2.052. -->
+    <model name="door">
+      <static>true</static>
+      <pose>3.0 0.427 0 0 0 3.14159265359</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <mesh><uri>package://arips_gazebo/assets/door_static.glb</uri></mesh>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <mesh><uri>package://arips_gazebo/assets/door_static.glb</uri></mesh>
+          </geometry>
         </visual>
       </link>
     </model>

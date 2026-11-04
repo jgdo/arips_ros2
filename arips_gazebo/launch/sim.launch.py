@@ -72,10 +72,13 @@ def generate_launch_description():
 
     robot_description = ParameterValue(Command(['xacro ', urdf_file]), value_type=str)
 
-    # Lets Gazebo resolve package://arips_description/meshes/...
+    # Lets Gazebo resolve package://arips_description/meshes/... and package://arips_gazebo/assets/...
     resource_path = AppendEnvironmentVariable(
         'GZ_SIM_RESOURCE_PATH',
-        os.path.dirname(get_package_share_directory('arips_description')),
+        os.pathsep.join([
+            os.path.dirname(get_package_share_directory('arips_description')),
+            os.path.dirname(pkg_share),
+        ]),
     )
 
     # Lets Gazebo find the gz_ros2_control system plugin
