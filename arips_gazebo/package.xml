@@ -31,6 +31,8 @@
   <exec_depend>arips_maps</exec_depend>
   <exec_depend>arips_semantic_map</exec_depend>
   <exec_depend>arips_route_graph</exec_depend>
+  <exec_depend>arips_moveit_config</exec_depend>
+  <exec_depend>joint_trajectory_server</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

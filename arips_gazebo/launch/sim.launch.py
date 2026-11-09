@@ -26,7 +26,8 @@ SUPPRESSED_GAZEBO_OUTPUT = (
 
 # Spawn pose (x, y, yaw) per world, used for the x/y/yaw arguments that are not given
 DEFAULT_SPAWN_POSES = {
-    'lu': (-6.0, 2.8, 0.0),
+    # Origin of the original SLAM map (lu_5_okt_2026_lyrical, same frame as the lu world)
+    'lu': (0.0, 0.0, 0.0),
 }
 
 

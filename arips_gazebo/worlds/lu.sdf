@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
-<!-- Walls from arips_maps/assets/lu.stl (12.4 m x 9.1 m, 2 m high, in metres). The origin lies
-     on a wall, sim.launch.py spawns the robot at (-6.0, 2.8) in this world. -->
+<!-- Walls from arips_maps/assets/lu.stl (12.4 m x 9.1 m, 2 m high, in metres). The world frame
+     is the frame of the original SLAM map (lu_5_okt_2026_lyrical.yaml), sim.launch.py
+     spawns the robot at its origin. -->
 <sdf version="1.10">
   <world name="lu">
     <physics name="1ms" type="ignored">
@@ -10,6 +11,9 @@
 
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <!-- Applies forces/torques from the GUI (Mouse Drag, Apply Force Torque) and the
+         /world/lu/wrench* topics, e.g. to open and close the door by hand -->
+    <plugin filename="gz-sim-apply-link-wrench-system" name="gz::sim::systems::ApplyLinkWrench" />
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
     <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
       <render_engine>ogre2</render_engine>
@@ -39,6 +43,8 @@
               <size>20 20</size>
             </plane>
           </geometry>
+          <!-- bit 0x01 like the walls: the door leaf (0x02) slides over it, the robot (0xffff) does not -->
+          <surface><contact><collide_bitmask>0x01</collide_bitmask></contact></surface>
         </collision>
         <visual name="visual">
           <geometry>
@@ -62,6 +68,8 @@
           <geometry>
             <mesh><uri>package://arips_maps/assets/lu.stl</uri><scale>1 1 0.5</scale></mesh>
           </geometry>
+          <!-- bit 0x01: walls; the door uses 0x02 so the two never collide -->
+          <surface><contact><collide_bitmask>0x01</collide_bitmask></contact></surface>
         </collision>
         <visual name="visual">
           <geometry>
@@ -73,6 +81,83 @@
           </material>
         </visual>
       </link>
+    </model>
+
+    <!-- Door with frame in the doorway of lu.stl (wall y 2.0..2.35), from the CAD exports
+         door_solid_frame.glb and door_solid_door.glb (both share the CAD coordinates:
+         x thickness with the handle on +x; frame y -0.062..0.916, leaf y 0..0.854, hinge
+         side +y). The model origin is the hinge axis on the leaf's hinge edge.
+         The frame link is fixed to the world; only the leaf turns on "hinge". Closed (0) the
+         leaf extends along -x, positive angles swing it towards -y (handle side) up to
+         ~100 deg. Light (5 kg) with 1 Nm hinge friction (~1.25 N at the handle) so it stays
+         where it is left, plus a little damping.
+         Visual and collision of both links are the CAD meshes.
+         collide_bitmask: ground, walls and frame 0x01, leaf 0x02, so the leaf never touches
+         them (its mesh reaches down to z 0) but still collides with the robot (0xffff). -->
+    <model name="door">
+      <pose>-0.723 1.98 0 0 0 0</pose>
+
+      <link name="frame">
+        <collision name="collision">
+          <pose>-0.854 0.045 0 0 0 -1.5707963268</pose>
+          <geometry>
+            <mesh><uri>package://arips_maps/assets/door_solid_frame.glb</uri></mesh>
+          </geometry>
+          <surface><contact><collide_bitmask>0x01</collide_bitmask></contact></surface>
+        </collision>
+        <visual name="visual">
+          <!-- same mesh coordinates as the leaf: hinge edge (x 0.045, y 0.854) -> origin -->
+          <pose>-0.854 0.045 0 0 0 -1.5707963268</pose>
+          <geometry>
+            <mesh><uri>package://arips_maps/assets/door_solid_frame.glb</uri></mesh>
+          </geometry>
+        </visual>
+      </link>
+      <joint name="frame_fixed" type="fixed">
+        <parent>world</parent>
+        <child>frame</child>
+      </joint>
+
+      <link name="leaf">
+        <inertial>
+          <!-- solid 0.854 x 0.045 x 1.99 m panel -->
+          <pose>-0.427 0.0225 0.995 0 0 0</pose>
+          <mass>5.0</mass>
+          <inertia>
+            <ixx>1.651</ixx><iyy>1.954</iyy><izz>0.3047</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <pose>-0.854 0.045 0 0 0 -1.5707963268</pose>
+          <geometry>
+            <mesh><uri>package://arips_maps/assets/door_solid_door.glb</uri></mesh>
+          </geometry>
+          <surface><contact><collide_bitmask>0x02</collide_bitmask></contact></surface>
+        </collision>
+        <visual name="visual">
+          <!-- maps mesh hinge edge (x 0.045, y 0.854) onto the link origin -->
+          <pose>-0.854 0.045 0 0 0 -1.5707963268</pose>
+          <geometry>
+            <mesh><uri>package://arips_maps/assets/door_solid_door.glb</uri></mesh>
+          </geometry>
+        </visual>
+      </link>
+      <joint name="hinge" type="revolute">
+        <parent>frame</parent>
+        <child>leaf</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>0</lower>
+            <upper>1.97</upper>
+          </limit>
+          <dynamics>
+            <damping>0.3</damping>
+            <friction>1.0</friction>
+          </dynamics>
+        </axis>
+      </joint>
     </model>
   </world>
 </sdf>

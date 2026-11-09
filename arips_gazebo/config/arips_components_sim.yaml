@@ -21,3 +21,17 @@ components:
     dependencies: []
     arguments:
       use_sim_time: 'true'
+  # On the real robot this runs as part of the servos component. It provides the
+  # /arm_controller and /door_gripper_group_controller actions that move_group executes on.
+  joint_trajectory_server:
+    package: joint_trajectory_server
+    file: launch/joint_trajectory_server.launch.py
+    dependencies: []
+    arguments:
+      use_sim_time: 'true'
+  move_group:
+    package: arips_moveit_config
+    file: launch/move_group.launch.py
+    dependencies: [joint_trajectory_server]
+    arguments:
+      use_sim_time: 'true'

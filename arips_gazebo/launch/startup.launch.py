@@ -132,10 +132,4 @@ def generate_launch_description():
             parameters=[{'config_file': components_config}],
             output='screen',
         ),
-
-        Node(package='arips_voice_interface',
-             executable='arips_say',
-             name='arips_say',
-             output='screen'
-        ),
     ])

@@ -1,5 +1,8 @@
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from moveit_configs_utils import MoveItConfigsBuilder
 from ament_index_python.packages import get_package_share_directory
 from launch_param_builder import load_yaml
@@ -32,7 +35,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             moveit_config.to_dict(),
-            {"use_sim_time": False,
+            {"use_sim_time": ParameterValue(LaunchConfiguration("use_sim_time"), value_type=bool),
              "publish_robot_description_semantic": True},
         ],
     )
@@ -54,4 +57,11 @@ def generate_launch_description():
     #     ],
     # )
     
-    return LaunchDescription([move_group])
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            "use_sim_time",
+            default_value="false",
+            description="Use simulation time (true in Gazebo)",
+        ),
+        move_group,
+    ])

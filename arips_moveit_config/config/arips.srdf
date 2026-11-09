@@ -37,6 +37,12 @@
     <group_state name="door_gripper_neutral" group="door_gripper_group">
         <joint name="joint_door_gripper" value="0"/>
     </group_state>
+    <group_state name="door_grasp_folded" group="arm">
+        <joint name="joint_2" value="-1.7424"/>
+        <joint name="joint_3" value="1.8494"/>
+        <joint name="joint_4" value="-1.4444"/>
+        <joint name="joint_slider" value="0.8"/>
+    </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
     <end_effector name="door_gripper" parent_link="link_3" group="door_gripper_group" parent_group="arm"/>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
