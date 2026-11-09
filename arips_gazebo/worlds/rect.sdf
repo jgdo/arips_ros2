@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- Simple 6 m x 4 m room, centered at the origin -->
 <sdf version="1.10">
-  <world name="rectangular_room">
+  <world name="rect">
     <physics name="1ms" type="ignored">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
@@ -120,12 +120,12 @@
       <link name="link">
         <collision name="collision">
           <geometry>
-            <mesh><uri>package://arips_gazebo/assets/door_static.glb</uri></mesh>
+            <mesh><uri>package://arips_maps/assets/door_static.glb</uri></mesh>
           </geometry>
         </collision>
         <visual name="visual">
           <geometry>
-            <mesh><uri>package://arips_gazebo/assets/door_static.glb</uri></mesh>
+            <mesh><uri>package://arips_maps/assets/door_static.glb</uri></mesh>
           </geometry>
         </visual>
       </link>

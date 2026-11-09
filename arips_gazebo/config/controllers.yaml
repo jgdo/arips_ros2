@@ -63,7 +63,8 @@ diff_drive_controller:
 
     base_frame_id: arips_wheel_center
     odom_frame_id: odom
-    enable_odom_tf: true
+    # odom -> arips_wheel_center and /csm_odom come from Gazebo's ground truth instead
+    enable_odom_tf: false
     publish_rate: 50.0
     cmd_vel_timeout: 0.5
 

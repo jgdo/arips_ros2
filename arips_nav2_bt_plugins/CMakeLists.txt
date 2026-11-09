@@ -47,6 +47,13 @@ target_link_libraries(
     nlohmann_json::nlohmann_json
     nav2_behavior_tree::nav2_behavior_tree
     nav2_ros_common::nav2_ros_common)
+add_bt_plugin(arips_nav2_bt_plugins_grab_door_handle src/grab_door_handle.cpp)
+target_link_libraries(
+  arips_nav2_bt_plugins_grab_door_handle
+  PUBLIC
+    arips_action_msgs::arips_action_msgs__rosidl_typesupport_cpp
+    nav2_behavior_tree::nav2_behavior_tree
+    nav2_ros_common::nav2_ros_common)
 add_bt_plugin(
   arips_nav2_bt_plugins_pop_next_semantic_route_segment
   src/pop_next_semantic_route_segment.cpp)
@@ -59,6 +66,7 @@ install(
     arips_nav2_bt_plugins_route_counter
     arips_nav2_bt_plugins_compute_semantic_route
     arips_nav2_bt_plugins_cross_door_step
+    arips_nav2_bt_plugins_grab_door_handle
     arips_nav2_bt_plugins_pop_next_semantic_route_segment
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib

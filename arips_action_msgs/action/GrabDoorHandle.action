@@ -1,0 +1,13 @@
+# Goal
+string prompt                    # Policy prompt (empty = use the server's default_prompt parameter)
+float64 max_duration_s           # Passed to RunPolicy (0.0 = use the policy node default)
+---
+# Result
+int32 SUCCESS=0
+int32 FAILURE=1
+int32 error_code
+string error_str
+---
+# Feedback
+bool handle_reached              # Current value of the arm target_reached signal
+uint32 published_actions         # Actions published by the policy so far

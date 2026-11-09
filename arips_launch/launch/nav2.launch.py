@@ -6,6 +6,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.descriptions import ParameterFile, ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -50,6 +51,22 @@ def generate_launch_description():
         }.items(),
     )
 
+    # nav2_bringup's navigation_launch.py no longer starts a lifecycle manager (only
+    # bringup_launch.py does), so start our own. node_names/bond_timeout come from params_file.
+    lifecycle_manager = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_navigation',
+        output='screen',
+        parameters=[
+            ParameterFile(params_file, allow_substs=True),
+            {
+                'autostart': ParameterValue(autostart, value_type=bool),
+                'use_sim_time': ParameterValue(use_sim_time, value_type=bool),
+            },
+        ],
+    )
+
     cross_door_step_server = Node(
         package='arips_actions',
         executable='cross_door_step_server',
@@ -63,5 +80,6 @@ def generate_launch_description():
         declare_autostart,
         declare_use_respawn,
         navigation_launch,
+        lifecycle_manager,
         cross_door_step_server,
     ])

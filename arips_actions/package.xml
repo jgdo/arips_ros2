@@ -11,6 +11,8 @@
   <depend>arips_semantic_map_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>rclpy</depend>
+  <depend>rosetta_interfaces</depend>
+  <depend>std_msgs</depend>
   <depend>tf2_ros</depend>
 
   <test_depend>ament_flake8</test_depend>

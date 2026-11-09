@@ -7,11 +7,13 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1/Frames1
+        - /TF1/Tree1
         - /RobotModel1/Mass Properties1
         - /Plan global1/Offset1
         - /Topo path1/Offset1
         - /Trajectories1/Topic1
+        - /Camera1
+        - /Camera1/Visibility1
         - /Camera1/Topic1
         - /Corrected Map1/Topic1
         - /Segmentation1/Topic1
@@ -26,6 +28,7 @@ Panels:
     Name: Selection
   - Class: rviz_common/Tool Properties
     Expanded:
+      - /2D Pose Estimate1
       - /2D Goal Pose1
       - /Publish Point1
     Name: Tool Properties
@@ -39,7 +42,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: LaserScan
 Visualization Manager:
   Class: ""
   Displays:
@@ -70,12 +73,26 @@ Visualization Manager:
         All Enabled: false
         alu:
           Value: false
+        arips_wheel_center:
+          Value: true
         base_link:
           Value: false
         door_gripper:
           Value: true
+        kinect_depth_frame:
+          Value: true
+        kinect_depth_optical_frame:
+          Value: true
+        kinect_link:
+          Value: true
         kinect_mount:
           Value: false
+        kinect_rgb_frame:
+          Value: true
+        kinect_rgb_optical_frame:
+          Value: true
+        laser_frame:
+          Value: true
         left_wheel:
           Value: false
         link_0:
@@ -86,6 +103,10 @@ Visualization Manager:
           Value: false
         link_3:
           Value: false
+        map:
+          Value: true
+        odom:
+          Value: true
         right_wheel:
           Value: false
       Marker Scale: 1
@@ -94,19 +115,30 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        base_link:
-          kinect_mount:
-            {}
-          left_wheel:
-            right_wheel:
-              alu:
-                {}
-          link_0:
-            link_1:
-              link_2:
-                link_3:
-                  door_gripper:
-                    {}
+        map:
+          odom:
+            arips_wheel_center:
+              base_link:
+                kinect_mount:
+                  kinect_link:
+                    kinect_depth_frame:
+                      kinect_depth_optical_frame:
+                        {}
+                    kinect_rgb_frame:
+                      kinect_rgb_optical_frame:
+                        {}
+                laser_frame:
+                  {}
+                left_wheel:
+                  right_wheel:
+                    alu:
+                      {}
+                link_0:
+                  link_1:
+                    link_2:
+                      link_3:
+                        door_gripper:
+                          {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -483,7 +515,7 @@ Visualization Manager:
       Use rainbow: true
       Value: false
     - Class: rviz_default_plugins/Camera
-      Enabled: false
+      Enabled: true
       Far Plane Distance: 100
       Image Rendering: background and overlay
       Max Value: 1
@@ -498,35 +530,36 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Transport Override: ""
-        Value: /kinect/depth/image_raw
-      Value: false
+        Value: /kinect/rgb/image_raw/compressed
+      Value: true
       Visibility:
         Camera: true
-        Corrected Map: true
+        Corrected Map: false
         DepthCloud: true
+        Door Grasp Approach Pose: false
         Global costmap: true
-        Grid: true
+        Grid: false
         Image: true
         InteractiveMarkers: true
-        LaserScan: true
-        Leader: true
-        Leader target pose: true
+        LaserScan: false
+        Leader: false
         Local Footprint: true
-        Local costmap: true
+        Local costmap: false
         MarkerArray: true
         MotionPlanning: true
         Path: true
-        Plan global: true
+        Plan global: false
         PointStamped: true
         Polygon: true
-        RobotModel: true
-        Route Graph: true
-        SLAM Map: true
+        RobotModel: false
+        Route Graph: false
+        SLAM Map: false
         Segmentation: true
-        Semantic Map: true
-        TF: true
-        Topo path: true
-        Trajectories: true
+        Semantic Map: false
+        TF: false
+        Teleop Target: true
+        Topo path: false
+        Trajectories: false
         Value: true
       Zoom Factor: 1
     - Class: rviz_default_plugins/InteractiveMarkers
@@ -575,7 +608,10 @@ Visualization Manager:
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: Route Graph
-      Namespaces: true
+      Namespaces:
+        Value: true
+        route_graph_edges: true
+        route_graph_nodes: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -657,13 +693,13 @@ Visualization Manager:
         Camera: true
         Corrected Map: true
         DepthCloud: true
+        Door Grasp Approach Pose: true
         Global costmap: true
         Grid: true
         Image: true
         InteractiveMarkers: true
         LaserScan: true
         Leader: true
-        Leader target pose: true
         Local Footprint: true
         Local costmap: true
         MarkerArray: true
@@ -678,6 +714,7 @@ Visualization Manager:
         Segmentation: true
         Semantic Map: true
         TF: true
+        Teleop Target: true
         Topo path: true
         Trajectories: true
         Value: true
@@ -713,56 +750,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          alu:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          door_gripper:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          kinect_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_wheel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_0:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_2:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_3:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_wheel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Loop Animation: false
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
@@ -809,56 +796,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          alu:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          door_gripper:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          kinect_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_wheel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_0:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_2:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_3:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_wheel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: true
@@ -910,10 +847,30 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /teleop_target_position
       Value: true
+    - Alpha: 1
+      Axes Length: 1
+      Axes Radius: 0.10000000149011612
+      Class: rviz_default_plugins/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Door Grasp Approach Pose
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /door_grasping_approach_pose
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -969,32 +926,33 @@ Visualization Manager:
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
     - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
+    - Class: arips_semantic_map_rviz/AddDoorTool
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/XYOrbit
-      Distance: 1.662731409072876
+      Angle: 0
+      Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: 0.016126826405525208
-        Y: -0.08703619241714478
-        Z: -2.384185791015625e-07
-      Focal Shape Fixed Size: false
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2903980016708374
+      Scale: 264.6827697753906
       Target Frame: <Fixed Frame>
-      Value: XYOrbit (rviz_default_plugins)
-      Yaw: 3.1004245281219482
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: -1.2303385734558105
+      Y: 1.9081777334213257
     Saved: ~
 Window Geometry:
   Camera:
@@ -1010,7 +968,7 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001d5000003e8fc0200000010fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000000af000003e80000001600fffffffb0000000c00430061006d00650072006100000000b0000003e60000000000000000fb0000000c00430061006d006500720061000000003b000004d20000001600fffffffb0000000a0049006d00610067006500000000af000003e80000000000000000fb0000000a0049006d00610067006501000000af000003e80000000000000000fb0000000c00430061006d00650072006100000000af000003e80000000000000000fb0000000c00430061006d0065007200610000000000ffffffff0000001600fffffffb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016000000010000010f00000619fc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b2000000000000000000000002000004b00000006ffc0100000001fb0000002600530065006d0061006e0074006900630020004d0061007000200045006400690074006f00720100000000000004b0000000b100ffffff00000003000004b000000285fc0100000003fb000000100044006900730070006c0061007900730100000000000002570000015600fffffffc0000025d000002530000025200fffffffa000000010200000004fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000000ffffffff0000016200fffffffb0000000a005600690065007700730100000000ffffffff0000009e00fffffffb0000000a005600690065007700730100000000ffffffff0000000000000000fb0000000800540069006d0065010000065a000000c70000003600fffffffb0000000800540069006d00650100000000000004500000000000000000000004b0000003e800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001d5000003e8fc020000000ffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000000af000003e80000001600fffffffb0000000c00430061006d00650072006100000000b0000003e60000000000000000fb0000000c00430061006d0065007200610300000b360000011700000502000003e2fb0000000a0049006d00610067006500000000af000003e80000000000000000fb0000000a0049006d00610067006501000000af000003e80000000000000000fb0000000c00430061006d00650072006100000000af000003e80000000000000000fb0000000c00430061006d0065007200610000000000ffffffff0000001600fffffffb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016000000010000010f000003e8fc0200000001fb0000001200530065006c0065006300740069006f006e010000025a000000b2000000000000000000000002000004b00000006ffc0100000001fb0000002600530065006d0061006e0074006900630020004d0061007000200045006400690074006f00720100000000000004b0000000b100ffffff00000003000004b000000285fc0100000003fb000000100044006900730070006c0061007900730100000000000002570000015600fffffffc0000025d000002530000025200fffffffa000000000200000006fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000000ffffffff0000005c00fffffffb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000000ffffffff0000016200fffffffb0000000a005600690065007700730100000000ffffffff0000009e00fffffffb0000000a005600690065007700730100000000ffffffff0000000000000000fb0000000800540069006d0065010000065a000000c70000003600fffffffb0000000800540069006d00650100000000000004500000000000000000000004b0000003e800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Semantic Map Editor:

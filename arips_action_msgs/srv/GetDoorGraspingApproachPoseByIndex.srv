@@ -1,0 +1,6 @@
+# Compute the door handle grasping approach pose for a door of the semantic map.
+int32 door_index # index into SemanticMap.doors
+---
+bool success
+string error_message
+geometry_msgs/PoseStamped pose # in map frame

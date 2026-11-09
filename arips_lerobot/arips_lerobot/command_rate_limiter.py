@@ -3,16 +3,21 @@
 Steps are applied to cached working positions instead of the (noisy, delayed) joint states.
 The working positions are re-synced to the joint states after a break in the target stream
 or when the joint states deviate too far from them.
+
+A Bool is published on every timer tick on the target_reached topic. It is true when, for every
+joint, the remaining distance between the target and the working position is below that joint's
+reached threshold, and false otherwise (including while no targets are received).
 """
 
 import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Bool, Float64MultiArray
 
 DEFAULT_JOINTS = ['joint_slider', 'joint_2', 'joint_3', 'joint_4', 'joint_door_gripper']
 DEFAULT_RESYNC_THRESHOLDS = [0.01, 0.05, 0.05, 0.05, 0.05]
+DEFAULT_REACHED_THRESHOLDS = [0.005, 0.02, 0.02, 0.02, 0.02]
 
 
 class CommandRateLimiter(Node):
@@ -30,11 +35,19 @@ class CommandRateLimiter(Node):
             raise RuntimeError(
                 f'resync_thresholds has {len(self.resync_thresholds)} values, '
                 f'expected {len(self.joint_names)}')
+        self.reached_thresholds = [float(v) for v in self.declare_parameter(
+            'reached_thresholds', DEFAULT_REACHED_THRESHOLDS).value]
+        if len(self.reached_thresholds) != len(self.joint_names):
+            raise RuntimeError(
+                f'reached_thresholds has {len(self.reached_thresholds)} values, '
+                f'expected {len(self.joint_names)}')
         target_topic = self.declare_parameter(
             'target_topic', '/arm_forward_position_controller/dummy_commands').value
         command_topic = self.declare_parameter(
             'command_topic', '/arm_forward_position_controller/commands').value
         joint_states_topic = self.declare_parameter('joint_states_topic', '/joint_states').value
+        reached_topic = self.declare_parameter(
+            'target_reached_topic', '/arm_forward_position_controller/target_reached').value
 
         self.current = None
         self.working = None
@@ -43,12 +56,14 @@ class CommandRateLimiter(Node):
         self.timed_out = True
 
         self.pub = self.create_publisher(Float64MultiArray, command_topic, 10)
+        self.reached_pub = self.create_publisher(Bool, reached_topic, 10)
         self.create_subscription(JointState, joint_states_topic, self.on_joint_state, 10)
         self.create_subscription(Float64MultiArray, target_topic, self.on_target, 10)
         self.create_timer(1.0 / self.rate, self.on_timer)
         self.get_logger().info(
             f'Ready: joints={self.joint_names} max_speed={self.max_speed} rate={self.rate} '
-            f'resync_thresholds={self.resync_thresholds}')
+            f'resync_thresholds={self.resync_thresholds} '
+            f'reached_thresholds={self.reached_thresholds}')
 
     def on_joint_state(self, msg):
         received = dict(zip(msg.name, msg.position))
@@ -68,10 +83,15 @@ class CommandRateLimiter(Node):
         self.target = list(msg.data)
         self.target_stamp = now
 
+    def publish_reached(self, reached):
+        self.reached_pub.publish(Bool(data=reached))
+
     def on_timer(self):
         if self.target_stamp is None or self.current is None:
+            self.publish_reached(False)
             return
         if self.get_clock().now() - self.target_stamp > self.timeout:
+            self.publish_reached(False)
             if not self.timed_out:
                 self.get_logger().info('Target timeout, stopped publishing commands')
                 self.timed_out = True
@@ -94,6 +114,8 @@ class CommandRateLimiter(Node):
                 self.working = list(self.current)
 
         diffs = [t - w for t, w in zip(self.target, self.working)]
+        self.publish_reached(all(
+            abs(d) < th for d, th in zip(diffs, self.reached_thresholds)))
         max_diff = max(abs(d) for d in diffs)
         max_step = self.max_speed / self.rate
         scale = 1.0 if max_diff <= max_step else max_step / max_diff

@@ -26,6 +26,11 @@
   <exec_depend>arips_web_dashboard</exec_depend>
   <exec_depend>arips_voice_interface</exec_depend>
   <exec_depend>component_manager</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>arips_maps</exec_depend>
+  <exec_depend>arips_semantic_map</exec_depend>
+  <exec_depend>arips_route_graph</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

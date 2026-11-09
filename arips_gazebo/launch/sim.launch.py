@@ -24,12 +24,36 @@ SUPPRESSED_GAZEBO_OUTPUT = (
     'Velocity command timed out. Braking.',
 )
 
+# Spawn pose (x, y, yaw) per world, used for the x/y/yaw arguments that are not given
+DEFAULT_SPAWN_POSES = {
+    'lu': (-6.0, 2.8, 0.0),
+}
+
+
+def world_name(context):
+    world = perform_substitutions(context, [LaunchConfiguration('world')])
+    return os.path.splitext(os.path.basename(world))[0]
+
+
+def world_file(context):
+    """world is either the name of a file in arips_gazebo/worlds or a path to an SDF file."""
+    world = perform_substitutions(context, [LaunchConfiguration('world')])
+    if os.sep in world or world.endswith('.sdf'):
+        return world
+    path = os.path.join(get_package_share_directory('arips_gazebo'), 'worlds', world + '.sdf')
+    if not os.path.isfile(path):
+        worlds = sorted(
+            os.path.splitext(f)[0]
+            for f in os.listdir(os.path.dirname(path)) if f.endswith('.sdf'))
+        raise RuntimeError(f"Unknown world '{world}', available: {', '.join(worlds)}")
+    return path
+
 
 def start_gazebo(context):
     gz_args = ['-r', '-v', '3']
     if perform_substitutions(context, [LaunchConfiguration('gui')]).lower() not in ('true', '1'):
         gz_args.append('-s')
-    world = perform_substitutions(context, [LaunchConfiguration('world')])
+    world = world_file(context)
 
     # Replaces ros_gz_sim/gz_sim.launch.py, whose process output cannot be filtered.
     # Its console output goes to the launch log only and is echoed by the handler below.
@@ -72,11 +96,12 @@ def generate_launch_description():
 
     robot_description = ParameterValue(Command(['xacro ', urdf_file]), value_type=str)
 
-    # Lets Gazebo resolve package://arips_description/meshes/... and package://arips_gazebo/assets/...
+    # Lets Gazebo resolve package://arips_description/meshes/... and package://arips_maps/assets/...
     resource_path = AppendEnvironmentVariable(
         'GZ_SIM_RESOURCE_PATH',
         os.pathsep.join([
             os.path.dirname(get_package_share_directory('arips_description')),
+            os.path.dirname(get_package_share_directory('arips_maps')),
             os.path.dirname(pkg_share),
         ]),
     )
@@ -93,20 +118,6 @@ def generate_launch_description():
             'robot_description': robot_description,
             'use_sim_time': True,
         }],
-        output='screen',
-    )
-
-    spawn_robot = Node(
-        package='ros_gz_sim',
-        executable='create',
-        arguments=[
-            '-topic', 'robot_description',
-            '-name', 'arips',
-            '-x', LaunchConfiguration('x'),
-            '-y', LaunchConfiguration('y'),
-            '-z', '0.01',
-            '-Y', LaunchConfiguration('yaw'),
-        ],
         output='screen',
     )
 
@@ -144,7 +155,8 @@ def generate_launch_description():
         output='screen',
     )
 
-    # Same topics as on the real robot: TwistStamped on /cmd_vel, odometry on /csm_odom
+    # TwistStamped on /cmd_vel as on the real robot. Its wheel odometry stays on
+    # /diff_drive_controller/odom, /csm_odom is Gazebo's ground truth (see bridge.yaml).
     diff_drive_spawner = Node(
         package='controller_manager',
         executable='spawner',
@@ -152,36 +164,59 @@ def generate_launch_description():
             'diff_drive_controller',
             '--param-file', controllers_config,
             '--controller-ros-args',
-            '-r /diff_drive_controller/cmd_vel:=/cmd_vel '
-            '-r /diff_drive_controller/odom:=/csm_odom',
+            '-r /diff_drive_controller/cmd_vel:=/cmd_vel',
         ],
         output='screen',
     )
 
-    # The controller manager only exists once the robot (and its gz_ros2_control plugin) is spawned
-    start_controllers = RegisterEventHandler(
-        OnProcessExit(
-            target_action=spawn_robot,
-            on_exit=[arm_controllers_spawner, diff_drive_spawner],
+    def spawn_robot(context):
+        pose = dict(zip(('x', 'y', 'yaw'), DEFAULT_SPAWN_POSES.get(world_name(context), (0.0, 0.0, 0.0))))
+        for name in pose:
+            value = perform_substitutions(context, [LaunchConfiguration(name)])
+            if value:
+                pose[name] = value
+
+        spawn = Node(
+            package='ros_gz_sim',
+            executable='create',
+            arguments=[
+                '-topic', 'robot_description',
+                '-name', 'arips',
+                '-x', str(pose['x']),
+                '-y', str(pose['y']),
+                '-z', '0.01',
+                '-Y', str(pose['yaw']),
+            ],
+            output='screen',
         )
-    )
+
+        # The controller manager only exists once the robot (and its gz_ros2_control plugin) is spawned
+        start_controllers = RegisterEventHandler(
+            OnProcessExit(
+                target_action=spawn,
+                on_exit=[arm_controllers_spawner, diff_drive_spawner],
+            )
+        )
+        return [spawn, start_controllers]
 
     return LaunchDescription([
         DeclareLaunchArgument(
             'world',
-            default_value=os.path.join(pkg_share, 'worlds', 'rectangular_room.sdf'),
-            description='Gazebo world file',
+            default_value='rect',
+            description='Name of a world in arips_gazebo/worlds (rect, lu, ...) or path to an SDF file',
         ),
         DeclareLaunchArgument('gui', default_value='true', description='Start the Gazebo GUI'),
-        DeclareLaunchArgument('x', default_value='0.0', description='Spawn x position [m]'),
-        DeclareLaunchArgument('y', default_value='0.0', description='Spawn y position [m]'),
-        DeclareLaunchArgument('yaw', default_value='0.0', description='Spawn yaw [rad]'),
+        DeclareLaunchArgument(
+            'x', default_value='', description='Spawn x position [m], default depends on the world'),
+        DeclareLaunchArgument(
+            'y', default_value='', description='Spawn y position [m], default depends on the world'),
+        DeclareLaunchArgument(
+            'yaw', default_value='', description='Spawn yaw [rad], default depends on the world'),
         resource_path,
         plugin_path,
         OpaqueFunction(function=start_gazebo),
         robot_state_publisher,
-        spawn_robot,
+        OpaqueFunction(function=spawn_robot),
         bridge,
         rgb_image_bridge,
-        start_controllers,
     ])

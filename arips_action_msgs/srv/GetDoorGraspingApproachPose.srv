@@ -1,0 +1,7 @@
+# Compute the pose from which the robot approaches the door handle for grasping.
+# The door pivot/extent points are given in the map frame.
+arips_semantic_map_msgs/Door door
+---
+bool success
+string error_message
+geometry_msgs/PoseStamped pose # in map frame

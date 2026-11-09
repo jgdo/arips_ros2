@@ -3,7 +3,7 @@ project(arips_gazebo)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch config urdf worlds assets
+install(DIRECTORY launch config urdf worlds
   DESTINATION share/${PROJECT_NAME}
 )
 
