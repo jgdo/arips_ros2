@@ -45,3 +45,9 @@
 __pycache__
 
 .github/copilot-instructions.md
+
+# Local colcon/ament package exclusion markers (any directory)
+AMENT_IGNORE
+
+# Python packaging metadata
+*.egg-info/
