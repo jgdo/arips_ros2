@@ -24,6 +24,8 @@ setup(
             'arips_actions.cross_door_step_server:main',
             'grab_door_handle_server = '
             'arips_actions.grab_door_handle_server:main',
+            'grab_door_handle_direct_sim_server = '
+            'arips_actions.grab_door_handle_direct_sim_server:main',
             'get_door_grasping_approach_pose = '
             'arips_actions.get_door_grasping_approach_pose:main',
         ],

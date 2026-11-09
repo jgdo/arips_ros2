@@ -10,6 +10,7 @@
   <depend>arips_action_msgs</depend>
   <depend>arips_semantic_map_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>moveit_msgs</depend>
   <depend>rclpy</depend>
   <depend>rosetta_interfaces</depend>
   <depend>std_msgs</depend>
