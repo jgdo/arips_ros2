@@ -1,0 +1,21 @@
+# Goal
+# Point to retreat from (e.g. a door hinge). Only the position is used; any
+# frame that can be transformed into the map frame is accepted.
+geometry_msgs/PoseStamped pivot
+# Distance to drive forward after turning away from the pivot [m].
+# 0.0 = server default (0.5 m).
+float64 forward_distance
+---
+# Result
+int32 SUCCESS=0
+int32 FAILURE=1
+int32 error_code
+string error_str
+float64 rotated_angle_deg         # Signed in-place rotation (+ = counter-clockwise)
+float64 driven_distance           # Distance driven forward [m]
+float64 final_pivot_distance      # Distance robot <-> pivot at the end [m]
+---
+# Feedback
+# Current phase: "gripper_neutral", "arm_folded", "rotate", "drive"
+string phase
+float64 remaining                 # Remaining angle [deg] or distance [m] of the base motion

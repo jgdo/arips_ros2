@@ -9,7 +9,10 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
     "action/CrossDoorStep.action"
+    "action/DriveAroundPivot.action"
+    "action/DriveForward.action"
     "action/GrabDoorHandle.action"
+    "action/RetreatFromPivot.action"
     "srv/GetDoorGraspingApproachPose.srv"
     "srv/GetDoorGraspingApproachPoseByIndex.srv"
     DEPENDENCIES action_msgs arips_semantic_map_msgs geometry_msgs

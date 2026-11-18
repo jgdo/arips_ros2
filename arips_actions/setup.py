@@ -26,6 +26,12 @@ setup(
             'arips_actions.grab_door_handle_server:main',
             'grab_door_handle_direct_sim_server = '
             'arips_actions.grab_door_handle_direct_sim_server:main',
+            'drive_around_pivot_server = '
+            'arips_actions.drive_around_pivot_server:main',
+            'drive_forward_server = '
+            'arips_actions.drive_forward_server:main',
+            'retreat_from_pivot_server = '
+            'arips_actions.retreat_from_pivot_server:main',
             'get_door_grasping_approach_pose = '
             'arips_actions.get_door_grasping_approach_pose:main',
         ],

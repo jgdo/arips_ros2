@@ -1,0 +1,22 @@
+# Goal
+# Point to drive around. Only the position is used; any frame that can be
+# transformed into the map frame is accepted.
+geometry_msgs/PoseStamped pivot
+# Angle to travel around the pivot (driving backwards). 0.0 = server default.
+float64 angle_deg
+---
+# Result
+int32 SUCCESS=0
+int32 FAILURE=1
+int32 error_code
+string error_str
+float64 start_distance            # Distance to pivot at start [m]
+float64 final_distance            # Distance to pivot at the end [m]
+float64 travelled_angle_deg       # Angle travelled around the pivot
+float64 max_distance_error        # Max |distance - start_distance| while arcing [m]
+float64 max_bearing_error_deg     # Max deviation of the y axis from the pivot direction while arcing
+---
+# Feedback
+float64 travelled_angle_deg
+float64 distance_error            # distance - start_distance [m]
+float64 bearing_error_deg         # deviation of the y axis from the pivot direction

@@ -84,9 +84,9 @@ class GetDoorGraspingApproachPoseNode(Node):
                 ('map_frame', 'map'),
                 ('base_frame', 'base_link'),
                 # Perpendicular distance of the approach position from the door line.
-                ('door_dist', 0.25),
+                ('door_dist', 0.20),
                 # Distance from the pivot along the door line (towards the extent point).
-                ('pivot_dist', 0.7),
+                ('pivot_dist', 0.9),
                 ('tf_timeout_s', 0.5),
                 ('pose_topic', 'door_grasping_approach_pose'),
                 ('semantic_map_topic', 'semantic_map'),

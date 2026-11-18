@@ -1,0 +1,14 @@
+# Goal
+# Distance to drive straight forward [m]. 0.0 = server default (0.15 m).
+# Negative values are treated as their absolute value.
+float64 distance
+---
+# Result
+int32 SUCCESS=0
+int32 FAILURE=1
+int32 error_code
+string error_str
+float64 driven_distance           # Distance actually driven [m]
+---
+# Feedback
+float64 remaining                 # Remaining distance [m]
