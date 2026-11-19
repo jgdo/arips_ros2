@@ -194,7 +194,9 @@ local_costmap:
       width: 3
       height: 3
       resolution: 0.05
-      robot_radius: 0.22
+      # Regular octagon, 0.43 m between parallel sides, centered on base_link
+      # (0.10 m behind arips_wheel_center).
+      footprint: '[[0.115, -0.089], [0.115, 0.089], [-0.011, 0.215], [-0.189, 0.215], [-0.315, 0.089], [-0.315, -0.089], [-0.189, -0.215], [-0.011, -0.215]]'
       footprint_padding: 0.01
       plugins: ['obstacle_layer', 'inflation_layer']
       obstacle_layer:
@@ -234,7 +236,9 @@ global_costmap:
       global_frame: map
       robot_base_frame: arips_wheel_center
       transform_tolerance: 1.0
-      robot_radius: 0.22
+      # Regular octagon, 0.43 m between parallel sides, centered on base_link
+      # (0.10 m behind arips_wheel_center).
+      footprint: '[[0.115, -0.089], [0.115, 0.089], [-0.011, 0.215], [-0.189, 0.215], [-0.315, 0.089], [-0.315, -0.089], [-0.189, -0.215], [-0.011, -0.215]]'
       footprint_padding: 0.01
       resolution: 0.05
       track_unknown_space: true
@@ -393,7 +397,8 @@ collision_monitor:
     FootprintStop:
       type: polygon
       action_type: stop
-      points: '[[0.22, 0.0], [0.156, 0.156], [0.0, 0.22], [-0.156, 0.156], [-0.22, 0.0], [-0.156, -0.156], [0.0, -0.22], [0.156, -0.156]]'
+      # Same octagon as the costmap footprint (centered on base_link).
+      points: '[[0.115, -0.089], [0.115, 0.089], [-0.011, 0.215], [-0.189, 0.215], [-0.315, 0.089], [-0.315, -0.089], [-0.189, -0.215], [-0.011, -0.215]]'
       min_points: 4
       visualize: false
       polygon_subsample: 5

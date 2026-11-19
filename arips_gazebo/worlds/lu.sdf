@@ -4,8 +4,8 @@
      spawns the robot at its origin. -->
 <sdf version="1.10">
   <world name="lu">
-    <physics name="1ms" type="ignored">
-      <max_step_size>0.001</max_step_size>
+    <physics name="120hz" type="ignored">
+      <max_step_size>0.008333333</max_step_size>
       <real_time_factor>1.0</real_time_factor>
     </physics>
 
@@ -133,7 +133,11 @@
           <geometry>
             <mesh><uri>package://arips_maps/assets/door_solid_door.glb</uri></mesh>
           </geometry>
-          <surface><contact><collide_bitmask>0x02</collide_bitmask></contact></surface>
+          <surface>
+            <contact><collide_bitmask>0x02</collide_bitmask></contact>
+            <!-- Maximum friction (DART clamps at 1000) so the gripper does not slip off while pulling -->
+            <friction><ode><mu>1000.0</mu><mu2>1000.0</mu2></ode></friction>
+          </surface>
         </collision>
         <visual name="visual">
           <!-- maps mesh hinge edge (x 0.045, y 0.854) onto the link origin -->

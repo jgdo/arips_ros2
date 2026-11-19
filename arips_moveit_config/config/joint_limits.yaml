@@ -32,4 +32,6 @@ joint_limits:
     has_velocity_limits: true
     max_velocity: 0.2
     has_acceleration_limits: true
-    max_acceleration: 1.0
+    # Must not exceed joint_trajectory_server's max_acceleration (0.2): otherwise the server stretches
+    # the trajectory and MoveIt aborts the execution as taking too long (TIMED_OUT, error -6).
+    max_acceleration: 0.2

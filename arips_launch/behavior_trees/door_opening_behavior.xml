@@ -1,0 +1,100 @@
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <!--
+    Like experimental_behavior.xml, but a door segment is handled by fully opening the
+    door first (grab handle, pull it open around the pivot, retreat, re-approach, push it
+    fully open) and only then crossing it with CrossDoorStep.
+  -->
+  <BehaviorTree ID="MainTree">
+    <Sequence name="ComputeRouteAndFollow">
+      <GetCurrentPose
+        current_pose="{current_pose}" />
+
+      <ComputeSemanticRoute
+        start="{current_pose}"
+        goal="{goal}"
+        semantic_route="{semantic_route}"
+        server_timeout="3000"
+        error_code_id="{compute_route_error_code}" />
+
+      <!-- The loop below ends with FAILURE in both cases: when the route is exhausted
+           (PopNextSemanticRouteSegment fails, the normal end) and when a segment fails.
+           segment_failed tells them apart, so a failed segment fails the whole goal. -->
+      <Script code="segment_failed := false" />
+      <!-- next_goal holds the end of the previous segment = start of the next one.
+           Seed it with the robot pose for the first segment. -->
+      <SetBlackboard output_key="next_goal" value="{current_pose}"/>
+      <Inverter>
+        <KeepRunningUntilFailure>
+          <Sequence>
+            <SetBlackboard output_key="segment_start_pose" value="{next_goal}"/>
+            <PopNextSemanticRouteSegment
+             semantic_route="{semantic_route}"
+             next_goal="{next_goal}"
+             segment_type="{segment_type}"
+             metadata_json="{metadata_json}"
+            />
+            <Fallback>
+              <Sequence name="FollowSegment">
+                <Sequence name="DriveInRoom" _skipIf="segment_type != 'room'">
+                  <ComputePathToPose goal="{next_goal}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+                  <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="general_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+                </Sequence>
+                <Sequence name="OpenAndCrossDoor" _skipIf="segment_type != 'door'">
+                  <!-- Remember where the door segment starts (in front of the door, on the door
+                       center line) and ends (behind the door). -->
+                  <SetBlackboard output_key="door_start_pose" value="{segment_start_pose}"/>
+
+                  <!-- Approach the door handle precisely. -->
+                  <GetDoorGraspingApproachPose
+                    metadata_json="{metadata_json}"
+                    approach_pose="{door_approach_pose}"
+                    server_timeout="3000"
+                    error_msg="{door_approach_error_msg}"/>
+                  <ComputePathToPose goal="{door_approach_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+                  <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+
+                  <!-- Grab the handle and pull the door open. -->
+                  <GrabDoorHandle server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                  <DriveAroundPivot metadata_json="{metadata_json}" angle_deg="0.0" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                  <!-- The leaf moved: drop its stale obstacle cells (closed position) from both costmaps. -->
+                  <ClearEntireCostmap name="ClearLocalCostmapAfterPull" service_name="local_costmap/clear_entirely_local_costmap"/>
+                  <ClearEntireCostmap name="ClearGlobalCostmapAfterPull" service_name="global_costmap/clear_entirely_global_costmap"/>
+                  <RetreatFromPivot metadata_json="{metadata_json}" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+
+                  <!-- Return precisely near the approach pose (precise checker: the push arc must start at a fixed radius) and push the door fully open. The target is
+                       shifted 0.10 m back (away from the door), right at the approach pose the robot
+                       got stuck on the door frame while turning. -->
+                  <OffsetPose input_pose="{door_approach_pose}" dx="-0.10" output_pose="{door_reapproach_pose}"/>
+                  <ComputePathToPose goal="{door_reapproach_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+                  <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+                  <!-- 60 deg: the default 66 deg arc hits the wall behind the robot. -->
+                  <DriveAroundPivot metadata_json="{metadata_json}" angle_deg="60.0" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                  <DriveForward server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+
+                  <!-- Drive back to the start of the door segment (on the door center line in front of
+                       the door) and cross the door from there; the next segment continues from behind the door.
+                       Precise checker: DriveForward ends close to door_start_pose, and with the general
+                       checker the crossing started off-center. -->
+                  <ComputePathToPose goal="{door_start_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+                  <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+                  <CrossDoorStep
+                    metadata_json="{metadata_json}"
+                    segment_type="{segment_type}"
+                    server_timeout="3000"
+                    error_code_id="{cross_door_error_code}"
+                    error_msg="{cross_door_error_msg}"/>
+                </Sequence>
+              </Sequence>
+              <!-- Reached only if the segment failed (or had an unknown type). -->
+              <Sequence>
+                <Script code="segment_failed := true" />
+                <AlwaysFailure />
+              </Sequence>
+            </Fallback>
+          </Sequence>
+        </KeepRunningUntilFailure>
+      </Inverter>
+      <ScriptCondition code="!segment_failed" />
+    </Sequence>
+  </BehaviorTree>
+</root>

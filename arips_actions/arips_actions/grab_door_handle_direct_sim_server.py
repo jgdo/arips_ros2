@@ -122,7 +122,7 @@ class GrabDoorHandleDirectSimServer(Node):
                 # Door gripper joint position for the pre-grab pose [rad]
                 ('pre_grab_gripper_rotation', 0.0),
                 # Final door gripper joint position after the forward move [rad]
-                ('gripper_rotation', 0.164),
+                ('gripper_rotation', 0.165),
                 ('execute_trajectory_action', '/execute_trajectory'),
                 ('ik_timeout_s', 1.0),
                 ('ik_avoid_collisions', True),

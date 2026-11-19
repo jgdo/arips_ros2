@@ -54,12 +54,29 @@ target_link_libraries(
     arips_action_msgs::arips_action_msgs__rosidl_typesupport_cpp
     nav2_behavior_tree::nav2_behavior_tree
     nav2_ros_common::nav2_ros_common)
+# Door opening plugins (call arips_actions servers; parse door metadata_json).
+foreach(name get_door_grasping_approach_pose drive_around_pivot retreat_from_pivot drive_forward)
+  add_bt_plugin(arips_nav2_bt_plugins_${name} src/${name}.cpp)
+  target_link_libraries(
+    arips_nav2_bt_plugins_${name}
+    PUBLIC
+      arips_action_msgs::arips_action_msgs__rosidl_typesupport_cpp
+      arips_semantic_map_msgs::arips_semantic_map_msgs__rosidl_typesupport_cpp
+      nlohmann_json::nlohmann_json
+      nav2_behavior_tree::nav2_behavior_tree
+      nav2_ros_common::nav2_ros_common)
+endforeach()
 add_bt_plugin(
   arips_nav2_bt_plugins_pop_next_semantic_route_segment
   src/pop_next_semantic_route_segment.cpp)
 target_link_libraries(
   arips_nav2_bt_plugins_pop_next_semantic_route_segment
   PUBLIC arips_semantic_map_msgs::arips_semantic_map_msgs__rosidl_typesupport_cpp)
+
+add_bt_plugin(arips_nav2_bt_plugins_offset_pose src/offset_pose.cpp)
+target_link_libraries(
+  arips_nav2_bt_plugins_offset_pose
+  PUBLIC nav2_behavior_tree::nav2_behavior_tree)
 
 install(
   TARGETS
@@ -68,6 +85,11 @@ install(
     arips_nav2_bt_plugins_cross_door_step
     arips_nav2_bt_plugins_grab_door_handle
     arips_nav2_bt_plugins_pop_next_semantic_route_segment
+    arips_nav2_bt_plugins_get_door_grasping_approach_pose
+    arips_nav2_bt_plugins_drive_around_pivot
+    arips_nav2_bt_plugins_retreat_from_pivot
+    arips_nav2_bt_plugins_drive_forward
+    arips_nav2_bt_plugins_offset_pose
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

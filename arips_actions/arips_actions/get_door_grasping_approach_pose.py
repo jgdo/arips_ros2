@@ -84,7 +84,9 @@ class GetDoorGraspingApproachPoseNode(Node):
                 ('map_frame', 'map'),
                 ('base_frame', 'base_link'),
                 # Perpendicular distance of the approach position from the door line.
-                ('door_dist', 0.20),
+                # 0.25 works with the 2.5 cm costmaps; at the old 5 cm resolution the octagon
+                # footprint (0.43 m wide) touched the door frame cells and the pose was unreachable.
+                ('door_dist', 0.25),
                 # Distance from the pivot along the door line (towards the extent point).
                 ('pivot_dist', 0.9),
                 ('tf_timeout_s', 0.5),

@@ -13,14 +13,18 @@ bt_navigator:
       plugin: nav2_bt_navigator::NavigateToPoseNavigator
     navigate_through_poses:
       plugin: nav2_bt_navigator::NavigateThroughPosesNavigator
-    default_nav_to_pose_bt_xml: $(find-pkg-share arips_launch)/behavior_trees/experimental_behavior.xml
-    plugin_lib_names: ['arips_nav2_bt_plugins_route_counter', 'arips_nav2_bt_plugins_compute_semantic_route', 'arips_nav2_bt_plugins_pop_next_semantic_route_segment', 'arips_nav2_bt_plugins_cross_door_step', 'arips_nav2_bt_plugins_grab_door_handle']
+    default_nav_to_pose_bt_xml: $(find-pkg-share arips_launch)/behavior_trees/door_opening_behavior.xml
+    #default_nav_to_pose_bt_xml: $(find-pkg-share arips_launch)/behavior_trees/experimental_behavior.xml
+    plugin_lib_names: ['arips_nav2_bt_plugins_route_counter', 'arips_nav2_bt_plugins_compute_semantic_route', 'arips_nav2_bt_plugins_pop_next_semantic_route_segment', 'arips_nav2_bt_plugins_cross_door_step', 'arips_nav2_bt_plugins_grab_door_handle', 'arips_nav2_bt_plugins_get_door_grasping_approach_pose', 'arips_nav2_bt_plugins_drive_around_pivot', 'arips_nav2_bt_plugins_retreat_from_pivot', 'arips_nav2_bt_plugins_drive_forward', 'arips_nav2_bt_plugins_offset_pose']
     #default_nav_to_pose_bt_xml: $(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml
     default_nav_through_poses_bt_xml: $(find-pkg-share nav2_bt_navigator)/behavior_trees/navigate_through_poses_w_replanning_and_recovery.xml
 
 controller_server:
   ros__parameters:
     use_sim_time: false
+    # Default 'odom' has no publisher. Without odometry DWB assumes the robot stands still
+    # and circles around goals instead of reaching them.
+    odom_topic: /csm_odom
     controller_frequency: 20.0
     costmap_update_timeout: 0.3
     min_x_velocity_threshold: 0.001
@@ -28,7 +32,10 @@ controller_server:
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
     progress_checker_plugins: ['progress_checker']
-    goal_checker_plugins: ['general_goal_checker']
+    goal_checker_plugins: ['general_goal_checker', 'precise_goal_checker', 'coarse_goal_checker']
+    # Graceful reached the door grasp approach pose 30/30 times within 3 cm / 2 deg in sim.
+    # RPP+RotationShim failed ~15% (spun in place near the goal), MPPI 0/10, DWB stopped short.
+    # The RPP and DWB blocks below are kept as unused alternatives (add them here to load them).
     controller_plugins: ['FollowPath']
     progress_checker:
       plugin: nav2_controller::SimpleProgressChecker
@@ -37,19 +44,103 @@ controller_server:
     general_goal_checker:
       plugin: nav2_controller::SimpleGoalChecker
       stateful: true
-      xy_goal_tolerance: 0.05
-      yaw_goal_tolerance: 0.08
+      # Room waypoints are intermediate goals. With 0.05 m DWB sometimes circles a goal
+      # at ~10 cm radius and never reaches it.
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 0.5
+    # Used by door_opening_behavior.xml to reach the door handle approach pose.
+    # The robot stops as soon as it is inside these tolerances, so they are set below the
+    # required 5 cm to leave some margin (RPP + RotationShim reaches them reliably).
+    precise_goal_checker:
+      plugin: nav2_controller::SimpleGoalChecker
+      stateful: true
+      xy_goal_tolerance: 0.03
+      yaw_goal_tolerance: 0.035
+    # Used by door_opening_behavior.xml for the second approach after pulling the door,
+    # which only needs to be roughly at the approach pose.
+    coarse_goal_checker:
+      plugin: nav2_controller::SimpleGoalChecker
+      stateful: true
+      xy_goal_tolerance: 0.2
+      yaw_goal_tolerance: 0.35
+    # Unused alternative: RotationShim + Regulated Pure Pursuit. The shim turns in place towards the path
+    # first, and at the end turns in place to the goal heading once the robot is within
+    # the goal checker's xy tolerance. RPP itself steers straight at the path end, so
+    # it converges on the goal position.
+    RPP:
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      angular_dist_threshold: 0.6
+      angular_disengage_threshold: 0.3
+      forward_sampling_distance: 0.3
+      rotate_to_heading_angular_vel: 0.4
+      max_angular_accel: 1.0
+      simulate_ahead_time: 1.0
+      rotate_to_goal_heading: true
+      closed_loop: true
+      primary_controller:
+        plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+        max_linear_vel: 0.15
+        lookahead_dist: 0.3
+        min_lookahead_dist: 0.15
+        max_lookahead_dist: 0.6
+        lookahead_time: 1.5
+        use_velocity_scaled_lookahead_dist: false
+        min_approach_linear_velocity: 0.03
+        approach_velocity_scaling_dist: 0.4
+        use_collision_detection: true
+        max_allowed_time_to_collision_up_to_carrot: 1.0
+        use_regulated_linear_velocity_scaling: true
+        use_cost_regulated_linear_velocity_scaling: false
+        regulated_linear_scaling_min_radius: 0.5
+        regulated_linear_scaling_min_speed: 0.05
+        use_fixed_curvature_lookahead: false
+        curvature_lookahead_dist: 0.3
+        # Turn in place when the carrot is more than rotate_to_heading_min_angle off. Without
+        # it, after passing the path end just outside the goal tolerance, the carrot was
+        # behind the robot and RPP drove a forward circle near the wall.
+        use_rotate_to_heading: true
+        rotate_to_heading_min_angle: 0.785
+        rotate_to_heading_angular_vel: 0.4
+        max_angular_accel: 1.0
+        allow_reversing: false
+        max_robot_pose_search_dist: 1.0
+        interpolate_curvature_after_goal: false
+        transform_tolerance: 0.5
+    # Graceful controller: smooth control law that converges on position and heading of
+    # a lookahead pose on the path, rotates in place at start and end.
     FollowPath:
+      plugin: "nav2_graceful_controller::GracefulController"
+      transform_tolerance: 0.5
+      min_lookahead: 0.25
+      max_lookahead: 0.6
+      k_phi: 2.0
+      k_delta: 1.0
+      beta: 0.4
+      lambda: 2.0
+      v_linear_min: 0.03
+      v_linear_max: 0.15
+      v_angular_max: 0.6
+      v_angular_min_in_place: 0.2
+      slowdown_radius: 0.4
+      initial_rotation: true
+      initial_rotation_tolerance: 0.4
+      prefer_final_rotation: true
+      rotation_scaling_factor: 0.5
+      allow_backward: false
+      use_collision_detection: true
+      in_place_collision_resolution: 0.1
+    # Unused alternative: previous DWB setup.
+    DWB:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
       min_vel_x: -0.0
       min_vel_y: 0.0
-      max_vel_x: 0.3
+      max_vel_x: 0.2
       max_vel_y: 0.0
-      max_vel_theta: 1.0
+      max_vel_theta: 0.6
       min_speed_theta: 0.2
       min_speed_xy: -0.3
-      max_speed_xy: 0.5
+      max_speed_xy: 0.2
       acc_lim_x: 0.5
       acc_lim_y: 0.0
       acc_lim_theta: 1.0
@@ -59,7 +150,8 @@ controller_server:
       vx_samples: 20
       vy_samples: 1
       vtheta_samples: 20
-      sim_time: 1.5
+      # 1.5 s trajectories near goals close to walls all hit obstacles, so DWB stopped short.
+      sim_time: 0.8
       linear_granularity: 0.025
       angular_granularity: 0.025
       transform_tolerance: 0.5
@@ -78,100 +170,13 @@ controller_server:
       GoalDist.scale: 50.0
       RotateToGoal.scale: 50.0
       RotateToGoal.slowing_factor: 5.0
-      RotateToGoal.lookahead_time: -1.0
+      # -1 judged the heading at the end of sim_time (1.5 s), which favoured fast turns
+      # that overshot the goal heading.
+      RotateToGoal.lookahead_time: 0.3
       PreferForward:
         classname: "dwb_critics::PreferForwardCritic"
         scale: 10.0
         penalty: 1.0
-    # FollowPath:
-    #   plugin: "nav2_rotation_shim_controller::RotationShimController"
-    #   primary_controller: "nav2_mppi_controller::MPPIController"
-    #   angular_dist_threshold: 0.785
-    #   forward_sampling_distance: 0.5
-    #   rotate_to_heading_angular_vel: 0.4
-    #   max_angular_accel: 1.5
-    #   simulate_ahead_time: 1.0
-
-    #   time_steps: 35
-    #   model_dt: 0.1
-    #   batch_size: 1000
-
-    #   vx_max: 0.3
-    #   vx_min: -0.3
-    #   ax_max: 0.5
-    #   ax_min: -1.0
-    #   vx_std: 0.2
-
-    #   az_max: 1.0
-    #   wz_std: 0.4
-    #   wz_max: 0.5
-
-    #   iteration_count: 1
-    #   prune_distance: 1.7
-    #   transform_tolerance: 0.3
-    #   temperature: 0.3
-    #   gamma: 0.015
-    #   motion_model: "DiffDrive"
-    #   visualize: true
-    #   regenerate_noises: true
-    #   TrajectoryVisualizer:
-    #     trajectory_step: 5
-    #     time_step: 3
-    #   critics: [
-    #     "ConstraintCritic", "CostCritic", "GoalCritic",
-    #     "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic",
-    #     "PathAngleCritic", "PreferForwardCritic"]
-    #   ConstraintCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 4.0
-    #   GoalCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 5.0
-    #     threshold_to_consider: 1.4
-    #   GoalAngleCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 3.0
-    #     threshold_to_consider: 0.5
-    #   PreferForwardCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 5.0
-    #     threshold_to_consider: 0.5
-    #   CostCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 3.81
-    #     critical_cost: 300.0
-    #     consider_footprint: false
-    #     collision_cost: 1000000.0
-    #     near_goal_distance: 1.0
-    #     trajectory_point_step: 2
-    #   PathAlignCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 14.0
-    #     max_path_occupancy_ratio: 0.05
-    #     trajectory_point_step: 4
-    #     threshold_to_consider: 0.5
-    #     offset_from_furthest: 20
-    #     use_path_orientations: false
-    #   PathFollowCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 5.0
-    #     offset_from_furthest: 5
-    #     threshold_to_consider: 1.4
-    #   PathAngleCritic:
-    #     enabled: true
-    #     cost_power: 1
-    #     cost_weight: 2.0
-    #     offset_from_furthest: 4
-    #     threshold_to_consider: 0.5
-    #     max_angle_to_furthest: 1.0
-    #     mode: 0
 
 
 smoother_server:
@@ -196,8 +201,10 @@ local_costmap:
       rolling_window: true
       width: 3
       height: 3
-      resolution: 0.05
-      robot_radius: 0.22
+      resolution: 0.025
+      # Regular octagon, 0.43 m between parallel sides, centered on base_link
+      # (0.10 m behind arips_wheel_center).
+      footprint: '[[0.115, -0.089], [0.115, 0.089], [-0.011, 0.215], [-0.189, 0.215], [-0.315, 0.089], [-0.315, -0.089], [-0.189, -0.215], [-0.011, -0.215]]'
       footprint_padding: 0.01
       plugins: ['obstacle_layer', 'inflation_layer']
       obstacle_layer:
@@ -218,7 +225,7 @@ local_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        inflation_radius: 0.10
       always_send_full_costmap: true
 
     local_costmap_client:
@@ -237,9 +244,11 @@ global_costmap:
       global_frame: map
       robot_base_frame: arips_wheel_center
       transform_tolerance: 1.0
-      robot_radius: 0.22
+      # Regular octagon, 0.43 m between parallel sides, centered on base_link
+      # (0.10 m behind arips_wheel_center).
+      footprint: '[[0.115, -0.089], [0.115, 0.089], [-0.011, 0.215], [-0.189, 0.215], [-0.315, 0.089], [-0.315, -0.089], [-0.189, -0.215], [-0.011, -0.215]]'
       footprint_padding: 0.01
-      resolution: 0.05
+      resolution: 0.025
       track_unknown_space: true
       plugins: ['static_layer', 'obstacle_layer', 'inflation_layer']
       static_layer:
@@ -248,7 +257,7 @@ global_costmap:
         map_subscribe_transient_local: true
       obstacle_layer:
         plugin: nav2_costmap_2d::ObstacleLayer
-        enabled: false # For now use slam_toolbox updates
+        enabled: true # laser updates needed so moved obstacles (e.g. the opened door leaf) are planned around
         observation_sources: scan
         scan:
           topic: /scan
@@ -262,8 +271,8 @@ global_costmap:
           raytrace_min_range: 0.0
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.25  # NavFn plans for a point robot: keep paths well clear of obstacles (e.g. the open door leaf). Local costmap stays at 0.10.
       always_send_full_costmap: true
 
     global_costmap_client:
@@ -311,6 +320,7 @@ docking_server:
     use_sim_time: false
     base_frame: arips_wheel_center
     fixed_frame: odom
+    odom_topic: /csm_odom
     controller_frequency: 50.0
     initial_perception_timeout: 5.0
     wait_charge_timeout: 5.0
@@ -392,7 +402,8 @@ collision_monitor:
     FootprintStop:
       type: polygon
       action_type: stop
-      points: '[[0.22, 0.0], [0.156, 0.156], [0.0, 0.22], [-0.156, 0.156], [-0.22, 0.0], [-0.156, -0.156], [0.0, -0.22], [0.156, -0.156]]'
+      # Same octagon as the costmap footprint (centered on base_link).
+      points: '[[0.115, -0.089], [0.115, 0.089], [-0.011, 0.215], [-0.189, 0.215], [-0.315, 0.089], [-0.315, -0.089], [-0.189, -0.215], [-0.011, -0.215]]'
       min_points: 4
       visualize: false
       polygon_subsample: 5

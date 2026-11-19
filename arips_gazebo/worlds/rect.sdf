@@ -2,8 +2,8 @@
 <!-- Simple 6 m x 4 m room, centered at the origin -->
 <sdf version="1.10">
   <world name="rect">
-    <physics name="1ms" type="ignored">
-      <max_step_size>0.001</max_step_size>
+    <physics name="120hz" type="ignored">
+      <max_step_size>0.008333333</max_step_size>
       <real_time_factor>1.0</real_time_factor>
     </physics>
 

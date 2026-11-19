@@ -58,7 +58,8 @@ class DriveAroundPivotServer(Node):
             parameters=[
                 ('map_frame', 'map'),
                 ('base_frame', 'arips_wheel_center'),
-                ('default_angle_deg', 70.0),
+                # 70 deg ran the robot's rear into the wall at the end of the arc in the lu world.
+                ('default_angle_deg', 66.0),
                 ('linear_speed', 0.1),
                 ('bearing_p_factor', 2.0),
                 ('distance_p_factor', 3.0),
