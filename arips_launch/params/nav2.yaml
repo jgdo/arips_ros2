@@ -117,15 +117,17 @@ controller_server:
       k_delta: 1.0
       beta: 0.4
       lambda: 2.0
+      # Fast between goals; within slowdown_radius of the goal the linear speed ramps
+      # down so the precise goal checker (3 cm / 2 deg) is still reached without overshoot.
       v_linear_min: 0.03
-      v_linear_max: 0.15
-      v_angular_max: 0.6
+      v_linear_max: 0.35
+      v_angular_max: 1.0
       v_angular_min_in_place: 0.2
-      slowdown_radius: 0.4
+      slowdown_radius: 0.6
       initial_rotation: true
       initial_rotation_tolerance: 0.4
       prefer_final_rotation: true
-      rotation_scaling_factor: 0.5
+      rotation_scaling_factor: 0.7
       allow_backward: false
       use_collision_detection: true
       in_place_collision_resolution: 0.1

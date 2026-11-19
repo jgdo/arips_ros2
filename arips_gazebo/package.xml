@@ -33,6 +33,10 @@
   <exec_depend>arips_route_graph</exec_depend>
   <exec_depend>arips_moveit_config</exec_depend>
   <exec_depend>joint_trajectory_server</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

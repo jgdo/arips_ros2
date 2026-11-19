@@ -67,6 +67,13 @@ class _Canceled(Exception):
     """Raised inside the execute callback when the goal was canceled."""
 
 
+
+def _ramped_speed(max_speed, min_speed, ramp_gain, remaining):
+    """Speed for the remaining distance/angle: max_speed far away, decelerating
+    linearly (ramp_gain * remaining) towards the end, but not below min_speed."""
+    return max(min_speed, min(max_speed, ramp_gain * max(0.0, remaining)))
+
+
 class RetreatFromPivotServer(Node):
     def __init__(self):
         super().__init__('retreat_from_pivot_server')
@@ -89,10 +96,14 @@ class RetreatFromPivotServer(Node):
                 ('move_timeout_s', 60.0),
                 ('server_wait_timeout_s', 10.0),
                 ('default_forward_distance', 0.5),
-                ('linear_speed', 0.1),
-                ('max_angular_speed', 0.2),
+                ('linear_speed', 0.25),
+                # Near the end the speed ramps down (ramp_gain * remaining distance) to
+                # min_linear_speed, so the faster speed does not overshoot the distance.
+                ('min_linear_speed', 0.04),
+                ('ramp_gain', 1.5),
+                ('max_angular_speed', 0.8),
                 ('min_angular_speed', 0.03),
-                ('angular_p_factor', 1.0),
+                ('angular_p_factor', 2.0),
                 ('heading_p_factor', 2.0),
                 ('rotate_threshold_deg', 1.5),
                 ('min_pivot_distance', 0.05),
@@ -119,6 +130,8 @@ class RetreatFromPivotServer(Node):
         self._linear_speed = abs(p('linear_speed'))
         self._max_angular_speed = abs(p('max_angular_speed'))
         self._min_angular_speed = abs(p('min_angular_speed'))
+        self._min_linear_speed = abs(p('min_linear_speed'))
+        self._ramp_gain = p('ramp_gain')
         self._angular_p = p('angular_p_factor')
         self._heading_p = p('heading_p_factor')
         self._rotate_threshold = math.radians(p('rotate_threshold_deg'))
@@ -385,7 +398,10 @@ class RetreatFromPivotServer(Node):
                 break
             omega = self._heading_p * _normalize_angle(start_yaw - yaw)
             omega = max(-self._max_angular_speed, min(self._max_angular_speed, omega))
-            self._publish_command(self._linear_speed, omega)
+            self._publish_command(
+                _ramped_speed(self._linear_speed, self._min_linear_speed,
+                              self._ramp_gain, remaining),
+                omega)
             time.sleep(self._control_period)
 
         self._publish_stop()

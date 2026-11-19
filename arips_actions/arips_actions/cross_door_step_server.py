@@ -26,7 +26,12 @@ class CrossDoorStepServer(Node):
                 ('alignment_p_factor', 3.0),
                 ('door_clearing_distance', 0.4),
                 ('control_rate_hz', 20.0),
-                ('forward_speed', 0.08),
+                ('forward_speed', 0.25),
+                # Near the end the speed ramps down (ramp_gain * remaining distance) to
+                # min_forward_speed. The next segment continues from here, so no full stop
+                # precision is needed, just no hard braking from full speed.
+                ('min_forward_speed', 0.06),
+                ('ramp_gain', 1.5),
                 ('enable_stamped_cmd_vel', True),
             ],
         )
@@ -40,6 +45,8 @@ class CrossDoorStepServer(Node):
             'door_clearing_distance').value
         control_rate_hz = self.get_parameter('control_rate_hz').value
         self._forward_speed = self.get_parameter('forward_speed').value
+        self._min_forward_speed = self.get_parameter('min_forward_speed').value
+        self._ramp_gain = self.get_parameter('ramp_gain').value
         self._initial_align_velocity = self.get_parameter('initial_align_veclocity').value
         self._use_twist_stamped = self.get_parameter(
             'enable_stamped_cmd_vel').value
@@ -158,7 +165,9 @@ class CrossDoorStepServer(Node):
             alignment_error = self._normalize_angle(line_yaw - current_yaw)
             self.get_logger().info(f'Alignment error: {alignment_error}')
             command = Twist()
-            command.linear.x = self._forward_speed
+            command.linear.x = max(
+                self._min_forward_speed,
+                min(self._forward_speed, self._ramp_gain * distance_left))
             command.angular.z = (
                 alignment_error * self._alignment_p_factor)
             self._publish_command(command)

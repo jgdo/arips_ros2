@@ -7,4 +7,8 @@ install(DIRECTORY launch config urdf worlds
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(PROGRAMS scripts/reset_door_test.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()

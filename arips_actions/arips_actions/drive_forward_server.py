@@ -39,6 +39,13 @@ class _Canceled(Exception):
     """Raised inside the execute callback when the goal was canceled."""
 
 
+
+def _ramped_speed(max_speed, min_speed, ramp_gain, remaining):
+    """Speed for the remaining distance/angle: max_speed far away, decelerating
+    linearly (ramp_gain * remaining) towards the end, but not below min_speed."""
+    return max(min_speed, min(max_speed, ramp_gain * max(0.0, remaining)))
+
+
 class DriveForwardServer(Node):
     def __init__(self):
         super().__init__('drive_forward_server')
@@ -49,7 +56,11 @@ class DriveForwardServer(Node):
                 ('map_frame', 'map'),
                 ('base_frame', 'arips_wheel_center'),
                 ('default_distance', 0.15),
-                ('linear_speed', 0.1),
+                ('linear_speed', 0.2),
+                # Near the end the speed ramps down (ramp_gain * remaining distance) to
+                # min_linear_speed, so the faster speed does not overshoot the distance.
+                ('min_linear_speed', 0.04),
+                ('ramp_gain', 1.5),
                 ('max_angular_speed', 0.2),
                 ('heading_p_factor', 2.0),
                 ('timeout_factor', 3.0),
@@ -64,6 +75,8 @@ class DriveForwardServer(Node):
         self._default_distance = abs(p('default_distance'))
         self._linear_speed = abs(p('linear_speed'))
         self._max_angular_speed = abs(p('max_angular_speed'))
+        self._min_linear_speed = abs(p('min_linear_speed'))
+        self._ramp_gain = p('ramp_gain')
         self._heading_p = p('heading_p_factor')
         self._timeout_factor = p('timeout_factor')
         self._tf_wait_timeout = p('tf_wait_timeout_s')
@@ -149,7 +162,10 @@ class DriveForwardServer(Node):
                 break
             omega = self._heading_p * _normalize_angle(start_yaw - yaw)
             omega = max(-self._max_angular_speed, min(self._max_angular_speed, omega))
-            self._publish_command(self._linear_speed, omega)
+            self._publish_command(
+                _ramped_speed(self._linear_speed, self._min_linear_speed,
+                              self._ramp_gain, remaining),
+                omega)
             time.sleep(self._control_period)
 
         self._publish_stop()

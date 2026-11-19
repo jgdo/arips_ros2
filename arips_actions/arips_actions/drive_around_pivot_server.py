@@ -60,7 +60,12 @@ class DriveAroundPivotServer(Node):
                 ('base_frame', 'arips_wheel_center'),
                 # 70 deg ran the robot's rear into the wall at the end of the arc in the lu world.
                 ('default_angle_deg', 66.0),
-                ('linear_speed', 0.1),
+                # Moderate: the robot pulls/pushes the door leaf on this arc.
+                ('linear_speed', 0.2),
+                # Near the end of the arc the speed ramps down (ramp_gain * remaining arc
+                # length) to min_linear_speed, so the arc angle is not overshot.
+                ('min_linear_speed', 0.04),
+                ('ramp_gain', 1.5),
                 ('bearing_p_factor', 2.0),
                 ('distance_p_factor', 3.0),
                 ('max_distance_correction_deg', 20.0),
@@ -78,6 +83,8 @@ class DriveAroundPivotServer(Node):
         self._base_frame = p('base_frame').value
         self._default_angle = math.radians(p('default_angle_deg').value)
         self._linear_speed = abs(p('linear_speed').value)
+        self._min_linear_speed = abs(p('min_linear_speed').value)
+        self._ramp_gain = p('ramp_gain').value
         self._bearing_p = p('bearing_p_factor').value
         self._distance_p = p('distance_p_factor').value
         self._max_distance_correction = math.radians(
@@ -235,10 +242,16 @@ class DriveAroundPivotServer(Node):
                 bearing - (desired_bearing + correction))
 
             # Rotating counter-clockwise decreases the pivot's bearing.
-            omega = feed_forward + self._bearing_p * heading_error
+            # Slow down towards the end of the arc (velocity is negative: backwards).
+            remaining = (target_angle - abs(travelled)) * start_distance
+            speed = max(self._min_linear_speed,
+                        min(self._linear_speed, self._ramp_gain * remaining))
+            ramped_velocity = math.copysign(speed, velocity)
+            omega = (feed_forward * ramped_velocity / velocity
+                     + self._bearing_p * heading_error)
             omega = max(-self._max_angular_speed,
                         min(self._max_angular_speed, omega))
-            self._publish_command(velocity, omega)
+            self._publish_command(ramped_velocity, omega)
             time.sleep(self._control_period)
 
     # --------------------------------------------------------------- helpers
