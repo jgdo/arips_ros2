@@ -1,9 +1,12 @@
 <root BTCPP_format="4" main_tree_to_execute="MainTree">
   <!--
-    Like experimental_behavior.xml, but a door segment is handled by fully opening the
-    door first (grab handle, pull it open around the pivot, retreat, re-approach, push it
-    fully open) and only then crossing it with CrossDoorStep. If the door is already open
-    (laser based GetDoorState), it is crossed directly.
+    Default navigate_to_pose behavior tree (nav2.yaml). Follows the semantic route segment by
+    segment: room segments with ComputePathToPose/FollowPath, door segments with CrossDoorStep.
+    A closed door is opened first (laser based GetDoorState; an open door is crossed directly):
+    - pull side: grab the handle, pull the door open around the pivot, retreat, re-approach,
+      push it fully open, then cross it.
+    - push side: grab the handle, unlock it, back out, hold the arm in front of the robot and
+      push the door partly open while crossing.
   -->
   <BehaviorTree ID="MainTree">
     <Sequence name="ComputeRouteAndFollow">
