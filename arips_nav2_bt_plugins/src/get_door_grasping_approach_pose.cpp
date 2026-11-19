@@ -26,6 +26,8 @@ public:
       BT::InputPort<std::string>("metadata_json", "Door metadata as JSON"),
       BT::OutputPort<geometry_msgs::msg::PoseStamped>(
         "approach_pose", "Door handle grasping approach pose (map frame)"),
+      BT::OutputPort<bool>(
+        "push_side", "True if the door opens away from the robot (push it open)"),
       BT::OutputPort<std::string>("error_msg", "Error message")
     });
   }
@@ -65,6 +67,7 @@ BT::NodeStatus GetDoorGraspingApproachPose::on_completion(
     return BT::NodeStatus::FAILURE;
   }
   setOutput("approach_pose", response->pose);
+  setOutput("push_side", static_cast<bool>(response->push_side));
   return BT::NodeStatus::SUCCESS;
 }
 

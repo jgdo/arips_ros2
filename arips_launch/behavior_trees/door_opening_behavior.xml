@@ -52,47 +52,91 @@
                     <GetDoorState metadata_json="{metadata_json}" door_open="{door_open}" door_angle_deg="{door_angle_deg}" server_timeout="3000" error_msg="{door_state_error_msg}"/>
                   </ForceSuccess>
 
+                  <Script code="door_crossed := false" />
                   <Sequence name="OpenDoor" _skipIf="door_open">
-                    <!-- Approach the door handle precisely. -->
+                    <!-- Approach the door handle precisely. push_side: the door opens away from the robot. -->
                     <GetDoorGraspingApproachPose
                       metadata_json="{metadata_json}"
                       approach_pose="{door_approach_pose}"
+                      push_side="{door_push_side}"
                       server_timeout="3000"
                       error_msg="{door_approach_error_msg}"/>
                     <ComputePathToPose goal="{door_approach_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
                     <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
-
-                    <!-- Grab the handle and pull the door open. -->
                     <GrabDoorHandle server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
-                    <DriveAroundPivot metadata_json="{metadata_json}" angle_deg="0.0" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
-                    <!-- The leaf moved: drop its stale obstacle cells (closed position) from both costmaps. -->
-                    <ClearEntireCostmap name="ClearLocalCostmapAfterPull" service_name="local_costmap/clear_entirely_local_costmap"/>
-                    <ClearEntireCostmap name="ClearGlobalCostmapAfterPull" service_name="global_costmap/clear_entirely_global_costmap"/>
-                    <RetreatFromPivot metadata_json="{metadata_json}" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
 
-                    <!-- Return precisely near the approach pose (precise checker: the push arc must start at a fixed radius) and push the door fully open. The target is
-                         shifted 0.10 m back (away from the door), right at the approach pose the robot
-                         got stuck on the door frame while turning. -->
-                    <OffsetPose input_pose="{door_approach_pose}" dx="-0.10" output_pose="{door_reapproach_pose}"/>
-                    <ComputePathToPose goal="{door_reapproach_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
-                    <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
-                    <!-- 60 deg: the default 66 deg arc hits the wall behind the robot. -->
-                    <DriveAroundPivot metadata_json="{metadata_json}" angle_deg="60.0" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
-                    <DriveForward server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                    <!-- Push side: unlock the door with the handle and push it partly open while crossing.
+                         The door is not opened completely, but far enough to drive through. -->
+                    <Sequence name="PushDoorOpenAndCross" _skipIf="!door_push_side">
+                      <!-- Pushing the handle 3 cm unlocks the door (real world). The door may resist
+                           (in sim it swings open a little instead), so MoveIt can time out before the
+                           arm got there completely; that is fine. -->
+                      <ForceSuccess>
+                        <MoveArm name="UnlockDoor" linear_distance="0.03" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      </ForceSuccess>
+                      <!-- Release the lever, pull the gripper back out of it and fold the arm. -->
+                      <MoveArm name="ReleaseHandle" named_target="door_gripper_neutral" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <MoveArm name="LeaveHandle" linear_distance="-0.08" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <MoveArm name="FoldArmAfterUnlock" named_target="door_grasp_folded" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <!-- Back straight out of the narrow doorway (no room to turn there). The robot then
+                           still faces the door perpendicularly, 0.54 m from the hinge, so it crosses from
+                           here instead of from door_start_pose: the route graph start lies only ~0.24 m
+                           from the hinge, where the handle of the swung-open leaf snags the robot. -->
+                      <BackUp name="BackOutOfDoorway" backup_dist="0.45" backup_speed="0.15" server_timeout="3000"/>
+                      <!-- Arm in front of the robot keeps the leaf (and its handle) away from the body. -->
+                      <MoveArm name="HoldArmForPush" named_target="door_push_hold" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <!-- Cross the door step slowly and perpendicular, which pushes the door open. -->
+                      <CrossDoorStep
+                        name="PushThroughDoor"
+                        metadata_json="{metadata_json}"
+                        segment_type="{segment_type}"
+                        server_timeout="3000"
+                        error_code_id="{cross_door_error_code}"
+                        error_msg="{cross_door_error_msg}"/>
+                      <!-- Clear the leaf far enough that the arm does not hit it while folding back. -->
+                      <DriveForward name="ClearDoor" distance="0.45" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <!-- Fold in two moves: the joints first (slider stays low), then the slider up. In
+                           sim the slider often stalls at ~0.67 when moving up, which is harmless for
+                           driving (the arm is already inside the footprint), so that part is best effort. -->
+                      <MoveArm name="FoldArmAfterPush" named_target="door_grasp_folded_low" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <ForceSuccess>
+                        <MoveArm name="RaiseSliderAfterPush" named_target="door_grasp_folded" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      </ForceSuccess>
+                      <Script code="door_crossed := true" />
+                    </Sequence>
 
-                    <!-- Drive back to the start of the door segment (on the door center line in front of
-                         the door) and cross the door from there; the next segment continues from behind the door.
-                         Precise checker: DriveForward ends close to door_start_pose, and with the general
-                         checker the crossing started off-center. -->
-                    <ComputePathToPose goal="{door_start_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
-                    <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
-                    <!-- Verify that the door really opened (e.g. the gripper may slip off the handle)
-                         instead of driving into a closed door. -->
-                    <GetDoorState name="VerifyDoorOpened" metadata_json="{metadata_json}" door_open="{door_open}" door_angle_deg="{door_angle_deg}" server_timeout="3000" error_msg="{door_state_error_msg}"/>
-                    <ScriptCondition code="door_open" />
+                    <!-- Pull side: pull the door open around the pivot, then push it fully open. -->
+                    <Sequence name="PullDoorOpen" _skipIf="door_push_side">
+                      <DriveAroundPivot metadata_json="{metadata_json}" angle_deg="0.0" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <!-- The leaf moved: drop its stale obstacle cells (closed position) from both costmaps. -->
+                      <ClearEntireCostmap name="ClearLocalCostmapAfterPull" service_name="local_costmap/clear_entirely_local_costmap"/>
+                      <ClearEntireCostmap name="ClearGlobalCostmapAfterPull" service_name="global_costmap/clear_entirely_global_costmap"/>
+                      <RetreatFromPivot metadata_json="{metadata_json}" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+
+                      <!-- Return precisely near the approach pose (precise checker: the push arc must start at a fixed radius) and push the door fully open. The target is
+                           shifted 0.10 m back (away from the door), right at the approach pose the robot
+                           got stuck on the door frame while turning. -->
+                      <OffsetPose input_pose="{door_approach_pose}" dx="-0.10" output_pose="{door_reapproach_pose}"/>
+                      <ComputePathToPose goal="{door_reapproach_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+                      <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+                      <!-- 60 deg: the default 66 deg arc hits the wall behind the robot. -->
+                      <DriveAroundPivot metadata_json="{metadata_json}" angle_deg="60.0" server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+                      <DriveForward server_timeout="3000" error_code_id="{door_error_code}" error_msg="{door_error_msg}"/>
+
+                      <!-- Drive back to the start of the door segment (on the door center line in front of
+                           the door) and cross the door from there; the next segment continues from behind the door.
+                           Precise checker: DriveForward ends close to door_start_pose, and with the general
+                           checker the crossing started off-center. -->
+                      <ComputePathToPose goal="{door_start_pose}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+                      <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="precise_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+                      <!-- Verify that the door really opened (e.g. the gripper may slip off the handle)
+                           instead of driving into a closed door. -->
+                      <GetDoorState name="VerifyDoorOpened" metadata_json="{metadata_json}" door_open="{door_open}" door_angle_deg="{door_angle_deg}" server_timeout="3000" error_msg="{door_state_error_msg}"/>
+                      <ScriptCondition code="door_open" />
+                    </Sequence>
                   </Sequence>
 
-                  <CrossDoorStep
+                  <CrossDoorStep _skipIf="door_crossed"
                     metadata_json="{metadata_json}"
                     segment_type="{segment_type}"
                     server_timeout="3000"

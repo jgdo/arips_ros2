@@ -1,0 +1,15 @@
+# Move the arm with MoveIt. Two modes:
+# - named_target not empty: move to this SRDF group state (e.g. door_grasp_folded,
+#   door_push_hold, door_gripper_neutral); the group is taken from the SRDF.
+# - named_target empty: move the door gripper linear_distance [m] in a straight
+#   (Cartesian) line along its pointing direction, orientation unchanged. Negative
+#   values move it backwards.
+string named_target
+float64 linear_distance
+---
+int32 SUCCESS=0
+int32 FAILURE=1
+int32 error_code
+string error_str
+---
+string state                     # Current step

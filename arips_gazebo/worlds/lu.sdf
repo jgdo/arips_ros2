@@ -89,8 +89,8 @@
          side +y). The model origin is the hinge axis on the leaf's hinge edge.
          The frame link is fixed to the world; only the leaf turns on "hinge". Closed (0) the
          leaf extends along -x, positive angles swing it towards -y (handle side) up to
-         ~100 deg. Light (5 kg) with 1 Nm hinge friction (~1.25 N at the handle) so it stays
-         where it is left, plus a little damping.
+         ~100 deg. Light (3 kg) with 0.3 Nm hinge friction (~0.4 N at the handle) so it stays
+         where it is left, plus a little damping. Easy to push, like the real door.
          Visual and collision of both links are the CAD meshes.
          collide_bitmask: ground, walls and frame 0x01, leaf 0x02, so the leaf never touches
          them (its mesh reaches down to z 0) but still collides with the robot (0xffff). -->
@@ -122,9 +122,9 @@
         <inertial>
           <!-- solid 0.854 x 0.045 x 1.99 m panel -->
           <pose>-0.427 0.0225 0.995 0 0 0</pose>
-          <mass>5.0</mass>
+          <mass>3.0</mass>
           <inertia>
-            <ixx>1.651</ixx><iyy>1.954</iyy><izz>0.3047</izz>
+            <ixx>0.9906</ixx><iyy>1.1724</iyy><izz>0.1828</izz>
             <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
           </inertia>
         </inertial>
@@ -157,8 +157,8 @@
             <upper>1.97</upper>
           </limit>
           <dynamics>
-            <damping>0.3</damping>
-            <friction>1.0</friction>
+            <damping>0.1</damping>
+            <friction>0.3</friction>
           </dynamics>
         </axis>
       </joint>

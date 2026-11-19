@@ -32,6 +32,8 @@ setup(
             'arips_actions.drive_forward_server:main',
             'retreat_from_pivot_server = '
             'arips_actions.retreat_from_pivot_server:main',
+            'move_arm_server = '
+            'arips_actions.move_arm_server:main',
             'get_door_grasping_approach_pose = '
             'arips_actions.get_door_grasping_approach_pose:main',
             'door_state_detector = '

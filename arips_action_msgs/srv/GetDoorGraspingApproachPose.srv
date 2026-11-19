@@ -5,3 +5,4 @@ arips_semantic_map_msgs/Door door
 bool success
 string error_message
 geometry_msgs/PoseStamped pose # in map frame
+bool push_side                 # true: the door opens away from the robot (push it open)

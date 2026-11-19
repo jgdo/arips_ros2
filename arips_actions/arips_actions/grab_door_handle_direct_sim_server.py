@@ -58,6 +58,10 @@ HANDLE_SPINDLE_Z = MESH_SPINDLE_Z                                         # 1.04
 HANDLE_LEVER_FACE_Y = DOOR_HINGE_Y + MESH_DOOR_FACE_X - MESH_LEVER_FACE_X  # 1.913
 # Direction from the handle side towards the door (map frame)
 APPROACH_YAW = math.pi / 2.0
+# Second handle on the other face of the leaf (+y side, mesh x < 0): same spindle, mirrored
+MESH_BACK_LEVER_FACE_X = -0.0669
+HANDLE_BACK_LEVER_FACE_Y = DOOR_HINGE_Y + MESH_DOOR_FACE_X - MESH_BACK_LEVER_FACE_X  # 2.092
+BACK_APPROACH_YAW = -math.pi / 2.0
 # The gripper axis sits this much above the spindle axis in the pre-grab pose
 PRE_GRAB_Z_OFFSET = -0.001
 
@@ -68,18 +72,23 @@ GRIPPER_OFFSET_IN_LINK_3 = (0.0, -0.0533, -0.0248)
 GRIPPER_REACH = 0.01
 
 
-def pre_grab_link_3_pose(pre_grab_distance):
-    """Return (x, y, z, yaw) of link_3 in the map frame for the pre-grab pose."""
+def pre_grab_link_3_pose(pre_grab_distance, back_side=False):
+    """Return (x, y, z, yaw) of link_3 in the map frame for the pre-grab pose.
+
+    back_side selects the handle on the +y face of the leaf (robot north of the door).
+    """
+    approach_yaw = BACK_APPROACH_YAW if back_side else APPROACH_YAW
+    lever_face_y = HANDLE_BACK_LEVER_FACE_Y if back_side else HANDLE_LEVER_FACE_Y
     # Gripper origin on the spindle axis, its front edge pre_grab_distance before the lever
     # face: step back from the lever face (on the spindle axis) against the approach direction.
     back = pre_grab_distance + GRIPPER_REACH
-    gx = HANDLE_SPINDLE_X - back * math.cos(APPROACH_YAW)
-    gy = HANDLE_LEVER_FACE_Y - back * math.sin(APPROACH_YAW)
+    gx = HANDLE_SPINDLE_X - back * math.cos(approach_yaw)
+    gy = lever_face_y - back * math.sin(approach_yaw)
     gz = HANDLE_SPINDLE_Z + PRE_GRAB_Z_OFFSET
 
     # Gripper -y points along the approach direction, so its (and link_3's) yaw is
-    # APPROACH_YAW + 90 deg. link_3 = gripper pose minus the rotated gripper offset.
-    yaw = APPROACH_YAW + math.pi / 2.0
+    # approach_yaw + 90 deg. link_3 = gripper pose minus the rotated gripper offset.
+    yaw = approach_yaw + math.pi / 2.0
     ox, oy, oz = GRIPPER_OFFSET_IN_LINK_3
     c, s = math.cos(yaw), math.sin(yaw)
     x = gx - (c * ox - s * oy)
@@ -225,7 +234,7 @@ class GrabDoorHandleDirectSimServer(Node):
         self.get_logger().info('Executing GrabDoorHandle goal (direct sim)')
         self._publish_feedback(goal_handle, False)
 
-        target = self._pre_grab_target()
+        target, back_side = self._pre_grab_target()
         if target is None:
             return self._abort(
                 goal_handle,
@@ -298,13 +307,15 @@ class GrabDoorHandleDirectSimServer(Node):
             return failure
         self.get_logger().info(f'Moved {self._forward_distance:.3f} m forward')
 
+        # The lever of the back handle points the other way as seen from the gripper.
+        rotation = -self._gripper_rotation if back_side else self._gripper_rotation
         failure = self._run_move(
-            self._joint_goal(self._gripper_group, {self._gripper_joint: self._gripper_rotation}),
+            self._joint_goal(self._gripper_group, {self._gripper_joint: rotation}),
             goal_handle, goal_id, deadline,
-            f'gripper rotation {self._gripper_rotation:.3f} rad')
+            f'gripper rotation {rotation:.3f} rad')
         if failure is not None:
             return failure
-        self.get_logger().info(f'Rotated the gripper to {self._gripper_rotation:.3f} rad')
+        self.get_logger().info(f'Rotated the gripper to {rotation:.3f} rad')
 
         self._publish_feedback(goal_handle, True)
         result = GrabDoorHandle.Result()
@@ -413,9 +424,18 @@ class GrabDoorHandleDirectSimServer(Node):
                 timeout=Duration(seconds=self._tf_timeout))
         except TransformException as ex:
             self.get_logger().error(str(ex))
-            return None
+            return None, False
 
-        x, y, z, yaw = pre_grab_link_3_pose(self._pre_grab_distance)
+        # Robot north of the hinge -> it faces the handle on the leaf's +y face.
+        try:
+            robot = self._tf_buffer.lookup_transform(
+                self._map_frame, self._planning_frame, Time(),
+                timeout=Duration(seconds=self._tf_timeout)).transform.translation
+        except TransformException as ex:
+            self.get_logger().error(str(ex))
+            return None, False
+        back_side = robot.y > DOOR_HINGE_Y
+        x, y, z, yaw = pre_grab_link_3_pose(self._pre_grab_distance, back_side)
         t, q = tf.transform.translation, tf.transform.rotation
         # Rotate the map point into the planning frame (full rotation) and translate.
         qv = (q.x, q.y, q.z)
@@ -433,7 +453,7 @@ class GrabDoorHandleDirectSimServer(Node):
         target.pose.position.z = pz
         target.pose.orientation.z = math.sin(local_yaw / 2.0)
         target.pose.orientation.w = math.cos(local_yaw / 2.0)
-        return target
+        return target, back_side
 
     def _joint_goal(self, group, positions):
         """Return a MoveGroup goal moving the joints of group to positions (name -> value)."""

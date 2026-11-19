@@ -37,6 +37,24 @@
     <group_state name="door_gripper_neutral" group="door_gripper_group">
         <joint name="joint_door_gripper" value="0"/>
     </group_state>
+    <!-- Arm held as a frame at the front left while pushing a door open (hinge on the left):
+         first link straight forward, second link and gripper pointing left. The gripper tip
+         (~0.21 m ahead of, 0.24 m left of the wheel center) is outside the mast and footprint,
+         so the leaf and its handle rest on the gripper instead of catching on the mast. -->
+    <group_state name="door_push_hold" group="arm">
+        <joint name="joint_2" value="1.5708"/>
+        <joint name="joint_3" value="1.5708"/>
+        <joint name="joint_4" value="0"/>
+        <joint name="joint_slider" value="0.5"/>
+    </group_state>
+    <!--Folded joints with the slider still low: folding from door_push_hold in one move
+        (slider moving up while the joints swing) often stalls the sim slider at ~0.67.-->
+    <group_state name="door_grasp_folded_low" group="arm">
+        <joint name="joint_2" value="-1.7424"/>
+        <joint name="joint_3" value="1.8494"/>
+        <joint name="joint_4" value="-1.4444"/>
+        <joint name="joint_slider" value="0.5"/>
+    </group_state>
     <group_state name="door_grasp_folded" group="arm">
         <joint name="joint_2" value="-1.7424"/>
         <joint name="joint_3" value="1.8494"/>

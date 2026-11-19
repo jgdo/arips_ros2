@@ -4,6 +4,10 @@
 <robot name="arips" xmlns:xacro="http://www.ros.org/wiki/xacro">
     <xacro:arg name="sim" default="true" />
     <xacro:arg name="controllers_file" default="$(find arips_gazebo)/config/controllers.yaml" />
+    <!-- With 1 Nm a door leaf pressing on the gripper pushed joint_2 to its hard stop while
+         crossing the door with the arm held out (door_push_hold), so the arm did not hold the
+         leaf away from the body and MoveIt rejected the out-of-bounds start state afterwards. -->
+    <xacro:arg name="arm_joint_effort" default="10" />
 
     <xacro:include filename="$(find arips_description)/urdf/arips_onshape.urdf.xacro" />
 
@@ -24,12 +28,13 @@
         <child link="base_link" />
     </joint>
 
-    <!-- The Onshape export has near-zero masses; give the base a realistic weight for stable contact -->
+    <!-- The Onshape export has near-zero masses; give the base a realistic weight for stable
+         contact. 12 kg so the robot pushes a door open without being slowed down by it. -->
     <link name="sim_ballast">
         <inertial>
-            <mass value="6.0" />
+            <mass value="12.0" />
             <origin xyz="0 0 0" rpy="0 0 0" />
-            <inertia ixx="0.093" ixy="0" ixz="0" iyy="0.093" iyz="0" izz="0.176" />
+            <inertia ixx="0.186" ixy="0" ixz="0" iyy="0.186" iyz="0" izz="0.352" />
         </inertial>
     </link>
     <joint name="sim_ballast_joint" type="fixed">
@@ -214,6 +219,11 @@
         </xacro:macro>
         <xacro:macro name="position_joint" params="name initial_value:=0.0">
             <joint name="${name}">
+                <!-- No ros2_control joint limiter in sim: the joint_trajectory_server already
+                     time-scales to the limits. The limiter (JointSaturationLimiter) clamped
+                     commands against stale state, so the slider and joint_2 stalled mid-move, and
+                     it aborted Gazebo when contact pushed kinect_joint slightly past its limit. -->
+                <limits enable="false" />
                 <command_interface name="position" />
                 <state_interface name="position">
                     <param name="initial_value">${initial_value}</param>

@@ -39,10 +39,11 @@ from rclpy.time import Time
 from tf2_ros import Buffer, TransformException, TransformListener
 
 
-def compute_approach_pose(pivot, extent, robot, door_dist, pivot_dist):
+def compute_approach_pose(pivot, extent, robot, door_dist, pivot_dist, perpendicular=False):
     """Return (x, y, yaw) of the approach pose, or None if the door is degenerate.
 
-    pivot, extent and robot are (x, y) tuples in the same frame.
+    pivot, extent and robot are (x, y) tuples in the same frame. With perpendicular, the
+    x axis points straight at the door line instead (push side: no arc around the pivot).
     """
     dx = extent[0] - pivot[0]
     dy = extent[1] - pivot[1]
@@ -61,6 +62,9 @@ def compute_approach_pose(pivot, extent, robot, door_dist, pivot_dist):
     x = pivot[0] + pivot_dist * ux + sign * door_dist * nx
     y = pivot[1] + pivot_dist * uy + sign * door_dist * ny
 
+    if perpendicular:
+        return x, y, math.atan2(-sign * ny, -sign * nx)
+
     # The y axis lies on the line through pivot and approach position. Start with y
     # pointing away from the pivot (x = y rotated by -90 deg) ...
     y_axis_angle = math.atan2(y - pivot[1], x - pivot[0])
@@ -72,6 +76,19 @@ def compute_approach_pose(pivot, extent, robot, door_dist, pivot_dist):
         yaw += math.pi
     yaw = math.atan2(math.sin(yaw), math.cos(yaw))
     return x, y, yaw
+
+
+def is_push_side(door, robot):
+    """True if the robot is on the side the door opens away from.
+
+    open_angle_deg is the opening angle counter-clockwise around the pivot, so a positive
+    angle swings the leaf to the left of the pivot -> extent direction.
+    """
+    ux = door.extent.x - door.pivot.x
+    uy = door.extent.y - door.pivot.y
+    # Robot side relative to the left normal (-uy, ux) of the door line.
+    side = (robot[0] - door.pivot.x) * -uy + (robot[1] - door.pivot.y) * ux
+    return side * door.open_angle_deg < 0.0
 
 
 class GetDoorGraspingApproachPoseNode(Node):
@@ -89,6 +106,12 @@ class GetDoorGraspingApproachPoseNode(Node):
                 ('door_dist', 0.25),
                 # Distance from the pivot along the door line (towards the extent point).
                 ('pivot_dist', 0.9),
+                # Same for the push side (the door opens away from the robot). There the robot
+                # faces the door straight on and stands closer to the pivot, since the arm reaches
+                # the handle on its right side (0.57 from the lu semantic pivot = 0.54 m from the
+                # real hinge).
+                ('push_door_dist', 0.24),
+                ('push_pivot_dist', 0.57),
                 ('tf_timeout_s', 0.5),
                 ('pose_topic', 'door_grasping_approach_pose'),
                 ('semantic_map_topic', 'semantic_map'),
@@ -155,9 +178,13 @@ class GetDoorGraspingApproachPoseNode(Node):
             return self._fail(response, f'TF lookup {map_frame} -> {base_frame} failed: {error}')
 
         robot = (transform.transform.translation.x, transform.transform.translation.y)
+        push_side = is_push_side(door, robot)
+        if push_side:
+            door_dist = self.get_parameter('push_door_dist').value
+            pivot_dist = self.get_parameter('push_pivot_dist').value
         result = compute_approach_pose(
             (door.pivot.x, door.pivot.y), (door.extent.x, door.extent.y),
-            robot, door_dist, pivot_dist)
+            robot, door_dist, pivot_dist, perpendicular=push_side)
         if result is None:
             return self._fail(response, 'Door pivot and extent coincide')
         x, y, yaw = result
@@ -173,10 +200,11 @@ class GetDoorGraspingApproachPoseNode(Node):
         response.success = True
         response.error_message = ''
         response.pose = pose
+        response.push_side = push_side
         self._pose_pub.publish(pose)
         self.get_logger().info(
             f'Approach pose: x={x:.3f} y={y:.3f} yaw={math.degrees(yaw):.1f} deg '
-            f'(robot at {robot[0]:.3f}, {robot[1]:.3f})')
+            f'(robot at {robot[0]:.3f}, {robot[1]:.3f}, {"push" if push_side else "pull"} side)')
         return response
 
     def _fail(self, response, error_message):

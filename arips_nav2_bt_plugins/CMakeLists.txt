@@ -55,7 +55,7 @@ target_link_libraries(
     nav2_behavior_tree::nav2_behavior_tree
     nav2_ros_common::nav2_ros_common)
 # Door opening plugins (call arips_actions servers; parse door metadata_json).
-foreach(name get_door_grasping_approach_pose get_door_state drive_around_pivot retreat_from_pivot drive_forward)
+foreach(name get_door_grasping_approach_pose get_door_state drive_around_pivot retreat_from_pivot drive_forward move_arm)
   add_bt_plugin(arips_nav2_bt_plugins_${name} src/${name}.cpp)
   target_link_libraries(
     arips_nav2_bt_plugins_${name}
@@ -90,6 +90,7 @@ install(
     arips_nav2_bt_plugins_drive_around_pivot
     arips_nav2_bt_plugins_retreat_from_pivot
     arips_nav2_bt_plugins_drive_forward
+    arips_nav2_bt_plugins_move_arm
     arips_nav2_bt_plugins_offset_pose
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib

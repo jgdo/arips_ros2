@@ -11,6 +11,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "action/CrossDoorStep.action"
     "action/DriveAroundPivot.action"
     "action/DriveForward.action"
+    "action/MoveArm.action"
     "action/GrabDoorHandle.action"
     "action/RetreatFromPivot.action"
     "srv/GetDoorGraspingApproachPose.srv"
