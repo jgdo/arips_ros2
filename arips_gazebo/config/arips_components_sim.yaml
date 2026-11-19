@@ -18,9 +18,12 @@ components:
   full_navigation:
     package: arips_launch
     file: launch/nav2.launch.py
-    dependencies: []
+    dependencies: [arips_actions]
     arguments:
       use_sim_time: 'true'
+      # One container process instead of ~12 nodes: with separate processes bt_navigator
+      # sometimes did not discover the planner's action server and bringup failed.
+      use_composition: 'true'
   # On the real robot this runs as part of the servos component. It provides the
   # /arm_controller and /door_gripper_group_controller actions that move_group executes on.
   joint_trajectory_server:
@@ -35,3 +38,12 @@ components:
     dependencies: [joint_trajectory_server]
     arguments:
       use_sim_time: 'true'
+  # Action servers of the navigation behavior trees. They need move_group (compute_ik and
+  # compute_cartesian_path) to be up when they start.
+  arips_actions:
+    package: arips_actions
+    file: launch/arips_actions.launch.py
+    dependencies: [move_group]
+    arguments:
+      use_sim_time: 'true'
+      sim: 'true'

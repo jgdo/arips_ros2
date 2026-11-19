@@ -27,10 +27,15 @@ components:
     package: arips_launch
     file: launch/localization.launch.py
     dependencies: [lidar]
+  # Action servers of the navigation behavior trees (door opening, arm moves)
+  arips_actions:
+    package: arips_actions
+    file: launch/arips_actions.launch.py
+    dependencies: [localization, servos]
   full_navigation:
     package: arips_launch
     file: launch/nav2.launch.py
-    dependencies: [localization]
+    dependencies: [localization, arips_actions]
   shutdown:
     package: arips_launch
     file: launch/shutdown.launch.py
