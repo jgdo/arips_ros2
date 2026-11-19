@@ -115,6 +115,15 @@ def generate_launch_description():
         output='screen',
     )
 
+    # Laser based door open/closed detection, used by GetDoorState in the door behavior tree.
+    door_state_detector = Node(
+        package='arips_actions',
+        executable='door_state_detector',
+        name='door_state_detector',
+        output='screen',
+        parameters=[{'use_sim_time': ParameterValue(use_sim_time, value_type=bool)}],
+    )
+
     return LaunchDescription([
         declare_params_file,
         declare_use_sim_time,
@@ -126,4 +135,5 @@ def generate_launch_description():
         lifecycle_manager,
         lifecycle_manager_composed,
         cross_door_step_server,
+        door_state_detector,
     ])

@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "action/RetreatFromPivot.action"
     "srv/GetDoorGraspingApproachPose.srv"
     "srv/GetDoorGraspingApproachPoseByIndex.srv"
+    "srv/GetDoorState.srv"
     DEPENDENCIES action_msgs arips_semantic_map_msgs geometry_msgs
 )
 

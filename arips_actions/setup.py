@@ -34,6 +34,8 @@ setup(
             'arips_actions.retreat_from_pivot_server:main',
             'get_door_grasping_approach_pose = '
             'arips_actions.get_door_grasping_approach_pose:main',
+            'door_state_detector = '
+            'arips_actions.door_state_detector:main',
         ],
     },
 )

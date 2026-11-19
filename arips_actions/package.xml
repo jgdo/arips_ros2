@@ -13,8 +13,11 @@
   <depend>moveit_msgs</depend>
   <depend>rclpy</depend>
   <depend>rosetta_interfaces</depend>
+  <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>visualization_msgs</depend>
+  <exec_depend>python3-numpy</exec_depend>
 
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

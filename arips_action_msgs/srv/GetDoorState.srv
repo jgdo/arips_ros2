@@ -1,0 +1,11 @@
+# Estimate whether a door is open or closed from the robot's sensors (laser scan).
+# The door pivot/extent points are given in the map frame (from the semantic map).
+# Only the two states "closed" and "fully open" are distinguished.
+arips_semantic_map_msgs/Door door
+---
+bool success          # false if the door could not be observed well enough
+string error_message
+bool is_open
+float64 angle_deg     # estimated leaf angle, ccw around the pivot from the closed position
+float64 closed_ratio  # fraction of laser beams crossing the closed door line that hit the leaf
+int32 num_beams       # number of laser beams crossing the closed door line
