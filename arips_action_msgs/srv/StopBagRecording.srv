@@ -1,0 +1,9 @@
+# Closes the current bag.
+---
+bool success
+string message
+# Per recorded topic: number of written messages and first/last receive time (recorder clock).
+string[] topics
+uint32[] counts
+builtin_interfaces/Time[] first_stamps
+builtin_interfaces/Time[] last_stamps

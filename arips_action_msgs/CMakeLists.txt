@@ -4,6 +4,7 @@ project(arips_action_msgs)
 find_package(ament_cmake REQUIRED)
 find_package(action_msgs REQUIRED)
 find_package(arips_semantic_map_msgs REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
@@ -17,7 +18,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "srv/GetDoorGraspingApproachPose.srv"
     "srv/GetDoorGraspingApproachPoseByIndex.srv"
     "srv/GetDoorState.srv"
-    DEPENDENCIES action_msgs arips_semantic_map_msgs geometry_msgs
+    "srv/StartBagRecording.srv"
+    "srv/StopBagRecording.srv"
+    DEPENDENCIES action_msgs arips_semantic_map_msgs builtin_interfaces geometry_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

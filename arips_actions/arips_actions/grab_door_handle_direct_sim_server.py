@@ -72,10 +72,12 @@ GRIPPER_OFFSET_IN_LINK_3 = (0.0, -0.0533, -0.0248)
 GRIPPER_REACH = 0.01
 
 
-def pre_grab_link_3_pose(pre_grab_distance, back_side=False):
+def pre_grab_link_3_pose(pre_grab_distance, back_side=False, z_offset=0.0):
     """Return (x, y, z, yaw) of link_3 in the map frame for the pre-grab pose.
 
     back_side selects the handle on the +y face of the leaf (robot north of the door).
+    z_offset is the height of the door model above its position in lu.sdf (the dataset
+    recorder respawns the door slightly raised).
     """
     approach_yaw = BACK_APPROACH_YAW if back_side else APPROACH_YAW
     lever_face_y = HANDLE_BACK_LEVER_FACE_Y if back_side else HANDLE_LEVER_FACE_Y
@@ -84,7 +86,7 @@ def pre_grab_link_3_pose(pre_grab_distance, back_side=False):
     back = pre_grab_distance + GRIPPER_REACH
     gx = HANDLE_SPINDLE_X - back * math.cos(approach_yaw)
     gy = lever_face_y - back * math.sin(approach_yaw)
-    gz = HANDLE_SPINDLE_Z + PRE_GRAB_Z_OFFSET
+    gz = HANDLE_SPINDLE_Z + PRE_GRAB_Z_OFFSET + z_offset
 
     # Gripper -y points along the approach direction, so its (and link_3's) yaw is
     # approach_yaw + 90 deg. link_3 = gripper pose minus the rotated gripper offset.
@@ -117,6 +119,9 @@ class GrabDoorHandleDirectSimServer(Node):
                 ('compute_ik_service', '/compute_ik'),
                 # Gap between the gripper front and the handle lever in the pre-grab pose
                 ('pre_grab_distance', 0.05),
+                # Height of the door model above its lu.sdf position [m], raises the handle.
+                # Read on every goal, so it can be changed at runtime.
+                ('door_z_offset', 0.0),
                 # Straight move of the gripper along its pointing direction after pre-grab
                 ('forward_distance', 0.045),
                 ('forward_velocity_scaling', 0.1),
@@ -435,7 +440,8 @@ class GrabDoorHandleDirectSimServer(Node):
             self.get_logger().error(str(ex))
             return None, False
         back_side = robot.y > DOOR_HINGE_Y
-        x, y, z, yaw = pre_grab_link_3_pose(self._pre_grab_distance, back_side)
+        x, y, z, yaw = pre_grab_link_3_pose(
+            self._pre_grab_distance, back_side, self.get_parameter('door_z_offset').value)
         t, q = tf.transform.translation, tf.transform.rotation
         # Rotate the map point into the planning frame (full rotation) and translate.
         qv = (q.x, q.y, q.z)

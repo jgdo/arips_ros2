@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+"""Entry point: record the door handle pre-grasp dataset (see record_grasp_dataset.py)."""
+
+from arips_grasp_dataset.record_grasp_dataset import main
+
+if __name__ == '__main__':
+    main()

@@ -4,3 +4,4 @@ int32 door_index # index into SemanticMap.doors
 bool success
 string error_message
 geometry_msgs/PoseStamped pose # in map frame
+bool push_side                 # true: the door opens away from the robot (push it open)

@@ -139,7 +139,38 @@ def generate_launch_description():
         name='kinect_rgb_image_bridge',
         arguments=['kinect/image'],
         remappings=[('kinect/image', 'kinect/rgb/image_raw')],
-        parameters=[{'use_sim_time': True}],
+        parameters=[{
+            'use_sim_time': True,
+            # turbojpeg_compressed_image_transport also advertises .../compressed, which
+            # published every frame twice on that topic.
+            'kinect.rgb.image_raw.enable_pub_plugins': [
+                'image_transport/raw', 'image_transport/compressed'],
+        }],
+        output='screen',
+    )
+
+    # The depth image comes from the plain parameter_bridge (no image_transport), so republish
+    # it as kinect/depth/image_raw/compressedDepth, the topic image_transport would offer.
+    # Only compresses while someone subscribes. Its default input QoS (best effort, depth 1)
+    # dropped frames whenever a compression took longer than a frame period.
+    depth_compressed_republisher = Node(
+        package='image_transport',
+        executable='republish',
+        name='kinect_depth_compressed_republisher',
+        parameters=[{
+            'in_transport': 'raw',
+            'out_transport': 'compressedDepth',
+            'use_sim_time': True,
+            'qos_overrides./kinect/depth/image_raw.subscription.reliability': 'reliable',
+            'qos_overrides./kinect/depth/image_raw.subscription.depth': 10,
+            'qos_overrides./kinect/depth/image_raw/compressedDepth.publisher.reliability':
+                'reliable',
+            'qos_overrides./kinect/depth/image_raw/compressedDepth.publisher.depth': 10,
+        }],
+        remappings=[
+            ('in', 'kinect/depth/image_raw'),
+            ('out/compressedDepth', 'kinect/depth/image_raw/compressedDepth'),
+        ],
         output='screen',
     )
 
@@ -220,4 +251,5 @@ def generate_launch_description():
         OpaqueFunction(function=spawn_robot),
         bridge,
         rgb_image_bridge,
+        depth_compressed_republisher,
     ])

@@ -1,0 +1,6 @@
+# Opens a new bag and starts writing the recorder's topics to it.
+# Directory of the new bag (must not exist yet).
+string uri
+---
+bool success
+string message
