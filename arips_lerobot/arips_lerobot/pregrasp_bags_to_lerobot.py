@@ -3,12 +3,14 @@
 One bag = one episode. Every RGB frame becomes one dataset frame with
 - observation.images.kinect        RGB (480, 640, 3) uint8
 - observation.images.kinect_depth  depth (480, 640, 1) float32 metres, stored as a LeRobot depth video
+  (both at --image-size H W instead if given; e.g. 288 384 = the doorhandle policy input size, which
+  makes video decoding in training ~1.6x faster and skips the resize in the model)
 - observation.state                joints at the image time (interpolated), see STATE_JOINTS
 - action                           target joints = last joint state of the bag, see ACTION_JOINTS
 
 usage:
   ros2 run arips_lerobot pregrasp_bags_to_lerobot --bags DIR --output ROOT --tag pull_right
-      [--repo-id arips/NAME] [--overwrite]
+      [--repo-id arips/NAME] [--image-size H W] [--overwrite]
 """
 
 import argparse
@@ -151,6 +153,14 @@ def build_frames(bag: Path, fps: float):
     return frames
 
 
+def resize_frame(frame: dict, height: int, width: int) -> dict:
+    """RGB with area interpolation (antialiased), depth with nearest (no blending of invalid / edge depths)."""
+    rgb = cv2.resize(frame['observation.images.kinect'], (width, height), interpolation=cv2.INTER_AREA)
+    depth = cv2.resize(frame['observation.images.kinect_depth'], (width, height), interpolation=cv2.INTER_NEAREST)
+    return {**frame, 'observation.images.kinect': rgb,
+            'observation.images.kinect_depth': depth.reshape(height, width, 1)}
+
+
 def features(height: int, width: int) -> dict:
     return {
         'observation.images.kinect': {
@@ -173,6 +183,8 @@ def main(argv=None):
                         help='door type tag, e.g. pull_right; part of the task string and the metadata')
     parser.add_argument('--repo-id', help='default: arips/<output folder name>')
     parser.add_argument('--fps', type=int, default=30, help='camera frame rate (default 30)')
+    parser.add_argument('--image-size', type=int, nargs=2, metavar=('H', 'W'),
+                        help='store RGB (area interpolation) and depth (nearest) at this size; default: camera size')
     parser.add_argument('--overwrite', action='store_true', help='delete an existing output folder first')
     args = parser.parse_args(argv)
 
@@ -197,6 +209,8 @@ def main(argv=None):
             print(f'skip {bag.name}: {error}', flush=True)
             skipped.append({'bag': bag.name, 'reason': str(error)})
             continue
+        if args.image_size:
+            frames = [resize_frame(f, *args.image_size) for f in frames]
         if dataset is None:
             h, w = frames[0]['observation.images.kinect'].shape[:2]
             dataset = LeRobotDataset.create(repo_id=repo_id, fps=args.fps, features=features(h, w),
@@ -225,6 +239,7 @@ def main(argv=None):
         'state_joints': STATE_JOINTS,
         'action_joints': ACTION_JOINTS,
         'action_meaning': 'target joint state = last joint state of the bag (pre-grasp pose)',
+        'image_size': list(args.image_size) if args.image_size else None,
         'episodes': sources,
         'skipped': skipped,
     }, indent=1))

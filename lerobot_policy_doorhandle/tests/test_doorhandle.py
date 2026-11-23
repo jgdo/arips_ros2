@@ -75,6 +75,38 @@ def test_train_step_and_gradients():
     assert len(groups[0]["params"]) + len(groups[1]["params"]) == n_params
 
 
+@pytest.mark.parametrize("backbone", ["resnet18", "convnext_tiny"])
+@pytest.mark.parametrize("freeze_stem", [False, True])
+def test_freeze_backbone(backbone, freeze_stem):
+    cfg = make_config(freeze_backbone=True, freeze_backbone_stem=freeze_stem)
+    cfg.vision_backbone = backbone
+    policy = DoorhandlePolicy(cfg).to(DEVICE).train()
+    stem = policy.backbone.stem
+    assert stem.in_channels == 4
+    stem_ids = {id(p) for p in stem.parameters()}
+    for p in policy.backbone.parameters():
+        assert p.requires_grad == (id(p) in stem_ids and not freeze_stem)
+    bns = [m for m in policy.backbone.modules() if isinstance(m, torch.nn.BatchNorm2d)]
+    assert all(not m.training for m in bns)
+    assert not any(m.training for m in policy.backbone.modules())  # also no stochastic depth
+    assert policy.fpn.training and policy.mlp.training
+
+    before = [p.detach().clone() for p in policy.backbone.parameters()]
+    stats = [m.running_mean.clone() for m in bns]
+    opt = torch.optim.AdamW(policy.get_optim_params(), lr=1e-2)
+    loss, _ = policy(make_batch())
+    loss.backward()
+    opt.step()
+    for p, b in zip(policy.backbone.parameters(), before):
+        assert torch.equal(p, b) == (not p.requires_grad)
+    assert all(torch.equal(m.running_mean, s) for m, s in zip(bns, stats))
+
+    groups = policy.get_optim_params()
+    assert len(groups) == (1 if freeze_stem else 2)
+    n_trainable = sum(1 for p in policy.parameters() if p.requires_grad)
+    assert sum(len(g["params"]) for g in groups) == n_trainable
+
+
 def test_inference_shapes_and_initial_residual():
     policy = DoorhandlePolicy(make_config()).to(DEVICE).eval()
     batch = make_batch(3)

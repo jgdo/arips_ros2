@@ -57,9 +57,12 @@ The policy expects a LeRobot dataset with these features:
 ```bash
 ros2 run arips_lerobot pregrasp_bags_to_lerobot \
     --bags src/arips_lerobot_data/bags/pregrasp_gazebo_pull_right_30 \
-    --output src/arips_lerobot_data/datasets/arips/pregrasp_gazebo_pull_right_30 \
-    --tag pull_right          # door type, in the task string and meta/pregrasp_source.json
+    --output src/arips_lerobot_data/datasets/arips/pregrasp_gazebo_pull_right_30_288x384 \
+    --tag pull_right \
+    --image-size 288 384
 ```
+
+`--tag` is the door type. It goes into the task string and into meta/pregrasp_source.json. `--image-size H W` is optional and resizes the frames before encoding: RGB with area interpolation, depth with nearest. It should match `image_size` in the policy config. Without it, frames are stored at the camera resolution (480×640), and decoding them becomes the bottleneck of the training.
 
 `meta/pregrasp_source.json` maps each episode index to its source bag and that bag's recording metadata (door pose, noise, IK target).
 
@@ -96,21 +99,29 @@ offsets, scales = cfg.joint_offset_scale(cfg.action_joint_names)  # normalized =
 ```bash
 lerobot-train \
     --policy.type=doorhandle \
-    --dataset.repo_id=arips/pregrasp_gazebo_pull_right_30 \
-    --dataset.root=src/arips_lerobot_data/datasets/arips/pregrasp_gazebo_pull_right_30 \
+    --dataset.repo_id=arips/pregrasp_gazebo_pull_right_30_288x384 \
+    --dataset.root=src/arips_lerobot_data/datasets/arips/pregrasp_gazebo_pull_right_30_288x384 \
     --dataset.eval_split=0.1 \
     --policy.color_augmentation=true \
     --policy.geometric_augmentation=true \
     --policy.depth_augmentation=true \
     --policy.state_noise=true \
     --policy.push_to_hub=false \
-    --steps=30000 --batch_size=32 --save_freq=5000 --num_workers=8 \
+    --steps=30000 --batch_size=32 --save_freq=5000 --num_workers=8 --policy.dtype=bfloat16 \
     --output_dir=src/arips_lerobot_data/train/doorhandle_pull_right_<date>
 ```
 
-- **Speed:** on an RTX 3090 this runs at about 6 steps/s at batch 8, using about 2.3 GB of GPU memory. The data loader (decoding HEVC video) is the usual bottleneck, so raise `--num_workers` if `data_s` dominates in the log.
+- **Speed:** see [Training speed](#training-speed) below. In short:
+  - `--policy.dtype=bfloat16`;
+  - `--num_workers=8`;
+  - a dataset converted with `--image-size 288 384`;
+  - optionally a fully frozen backbone.
 - **Fast experiments:** `--policy.vision_backbone=resnet18 --policy.pretrained_backbone_weights=ResNet18_Weights.IMAGENET1K_V1`.
-- **Learning rate:** the backbone gets `optimizer_lr * backbone_lr_scale` (1e-4); everything else gets `optimizer_lr` (1e-3). AdamW with cosine decay and warmup. LeRobot shrinks the schedule automatically for runs shorter than `scheduler_decay_steps`.
+- **Freezing the backbone:** `--policy.freeze_backbone=true` stops gradients to the pretrained backbone and keeps it in eval mode (fixed BatchNorm statistics, no ConvNeXt stochastic depth). The FPN, keypoint heads and MLP still train.
+  - The 4-channel stem conv stays trainable, because its depth filter is not pretrained (it starts as the mean of the RGB filters).
+  - Add `--policy.freeze_backbone_stem=true` to freeze the stem as well.
+  - With ConvNeXt-Tiny, a frozen backbone (stem trainable) leaves about 1.3 M trainable parameters out of 29 M.
+- **Learning rate:** the trainable part of the backbone gets `optimizer_lr * backbone_lr_scale` (1e-4); everything else gets `optimizer_lr` (1e-3). AdamW with cosine decay and warmup. LeRobot shrinks the schedule automatically for runs shorter than `scheduler_decay_steps`.
 - **Logged values:**
   - `loss_nll`, `loss_fk`;
   - `fk_mm`, the mean door-gripper position error;
@@ -127,6 +138,39 @@ lerobot-train \
 | `state_noise` | Gaussian noise on `observation.state` (raw units) | `state_noise_std` (0.005 m, then 1° for each rotary joint) |
 
 State noise is added before the residual base is taken, so the network cannot simply copy q_current. It has to use the image.
+
+### Training speed
+
+Measured on an RTX 3090 with ConvNeXt-Tiny, batch 16 and all augmentations on, while another job was using the same GPU. Treat the absolute numbers as roughly ±25 %.
+
+GPU time of one step, measured with CUDA events on a fixed batch:
+
+| configuration | fp32 | bf16 | backbone forward / backward (bf16) |
+|---|---|---|---|
+| unfrozen | 341 ms | 147 ms | 34 / 81 ms |
+| `freeze_backbone` (stem trainable) | 164 ms | 105 ms | 35 / 44 ms |
+| `freeze_backbone` + `freeze_backbone_stem` | 105 ms | 65 ms | 32 / 5 ms |
+
+Every row also includes about 7 ms host-to-device copy at full resolution, 9 ms augmentation, 7 ms head and loss, and up to 6 ms optimizer.
+
+- **bf16** (`--policy.dtype=bfloat16`): makes lerobot-train run the forward pass under bf16 autocast. The weights stay fp32, and augmentation, soft-argmax, the MLP head and the loss run in fp32. In the GPU benchmark it is 1.6–2.3× faster.
+- **Trainable stem is expensive:** with a frozen backbone and a trainable stem, the gradient still has to pass back through the whole backbone to reach the stem. Only freezing the stem as well removes the backbone backward.
+- **Data loader:** each sample decodes one AV1 RGB frame and one lossless HEVC depth frame. At 480×640 that takes about 40 ms per sample, of which depth is about 29 ms.
+  - `--num_workers=8` was best. 12 workers oversubscribe 16 CPU cores and get slower again.
+  - Converting the dataset at the model input size (`pregrasp_bags_to_lerobot --image-size 288 384`) brings this down to about 25 ms per sample. The loader then delivers about 260 samples/s with 8 workers instead of about 165, and the resize in the model is skipped.
+  - Depth is stored with nearest interpolation, so it matches the model's own nearest resize up to the 12-bit quantization.
+
+End to end in `lerobot-train`, measured as steady-state samples/s:
+
+| setup | samples/s |
+|---|---|
+| unfrozen, fp32, 480×640 dataset, 4 workers (old default) | 49 |
+| unfrozen, bf16, 288×384, 8 workers | 83 |
+| frozen + trainable stem, bf16, 288×384, 8 workers | 114 |
+| fully frozen, fp32, 480×640, 4 workers | 137 |
+| fully frozen, bf16, 288×384, 8 workers | 177–222 |
+
+With a fully frozen backbone, the main training process is the limit: it runs at 100 % of one CPU core launching kernels.
 
 ## Inference
 
@@ -166,7 +210,7 @@ def predict(rgb_uint8_hwc, depth_m_hw, joints):
 ```bash
 python -m lerobot_policy_doorhandle.evaluate \
     --policy src/arips_lerobot_data/train/RUN/checkpoints/last/pretrained_model \
-    --dataset-root src/arips_lerobot_data/datasets/arips/pregrasp_gazebo_pull_right_30 \
+    --dataset-root src/arips_lerobot_data/datasets/arips/pregrasp_gazebo_pull_right_30_288x384 \
     [--episodes 27 28 29] [--json result.json]
 ```
 

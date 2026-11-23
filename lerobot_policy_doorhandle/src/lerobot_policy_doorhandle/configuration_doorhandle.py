@@ -60,11 +60,20 @@ class DoorhandleConfig(PreTrainedConfig):
     image_size: tuple[int, int] = (288, 384)
     vision_backbone: str = "convnext_tiny"  # or "resnet18" (fast tests)
     pretrained_backbone_weights: str | None = "ConvNeXt_Tiny_Weights.IMAGENET1K_V1"
+    # Freeze the pretrained backbone (no gradients, BatchNorm statistics fixed). The 4-channel stem
+    # conv stays trainable unless freeze_backbone_stem is set too, since its depth filter is not
+    # pretrained (only initialised as the mean of the RGB filters).
+    freeze_backbone: bool = False
+    freeze_backbone_stem: bool = False
     fpn_channels: int = 128
     num_keypoints: int = 16
     keypoint_feature_dim: int = 32
     hidden_dims: tuple[int, ...] = (512, 256)
     dropout: float = 0.1
+
+    # Training precision. "bfloat16" makes lerobot-train run the forward pass under bf16 autocast
+    # (backbone / FPN convolutions); augmentation, soft-argmax, the MLP head and the loss stay float32.
+    dtype: str = "float32"
 
     # -- loss ------------------------------------------------------------------------------------
     nll_weight: float = 1.0
@@ -107,6 +116,8 @@ class DoorhandleConfig(PreTrainedConfig):
             raise ValueError("doorhandle predicts a single pose: chunk_size, n_action_steps, n_obs_steps = 1")
         if self.vision_backbone not in ("convnext_tiny", "resnet18"):
             raise ValueError(f"vision_backbone must be convnext_tiny or resnet18, got {self.vision_backbone}")
+        if self.dtype not in ("float32", "bfloat16"):
+            raise ValueError(f"dtype must be 'float32' or 'bfloat16', got {self.dtype!r}")
         if self.depth_input_unit not in ("mm", "m"):
             raise ValueError(f"depth_input_unit must be 'mm' or 'm', got {self.depth_input_unit!r}")
         missing = [j for j in self.action_joint_names if j not in self.state_joint_names]

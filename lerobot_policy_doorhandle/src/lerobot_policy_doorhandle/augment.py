@@ -28,13 +28,13 @@ COLOR_RANGES = {
 }
 
 
-def _uniform(n: int, lo: float, hi: float, device) -> Tensor:
-    return torch.empty(n, 1, 1, 1, device=device).uniform_(lo, hi)
+# Constants are applied as Python scalars: building small tensors from Python lists on the GPU
+# (new_tensor / torch.tensor(..., device=cuda)) is a blocking copy that stalls the training step.
 
 
 def _gray(x: Tensor) -> Tensor:
-    w = x.new_tensor(GRAY_WEIGHTS).view(1, 3, 1, 1)
-    return (x * w).sum(1, keepdim=True)
+    wr, wg, wb = GRAY_WEIGHTS
+    return wr * x[:, 0:1] + wg * x[:, 1:2] + wb * x[:, 2:3]
 
 
 def _blend(x: Tensor, other: Tensor, f: Tensor) -> Tensor:
@@ -55,61 +55,51 @@ def _saturation(x: Tensor, f: Tensor) -> Tensor:
 
 def _sharpness(x: Tensor, f: Tensor) -> Tensor:
     # torchvision's smoothing kernel; the 1-pixel border keeps the original pixels.
-    k = x.new_tensor([[1, 1, 1], [1, 5, 1], [1, 1, 1]]) / 13
-    blurred = F.conv2d(x, k.expand(3, 1, 3, 3), groups=3)
+    # kernel [[1, 1, 1], [1, 5, 1], [1, 1, 1]] / 13 = (3x3 box sum + 4 * centre) / 13
+    blurred = (9.0 * F.avg_pool2d(x, 3, stride=1) + 4.0 * x[..., 1:-1, 1:-1]) / 13.0
     smooth = x.clone()
     smooth[..., 1:-1, 1:-1] = blurred
     return _blend(x, smooth, f)
 
 
 def _hue(x: Tensor, shift: Tensor) -> Tensor:
+    """Shifts the HSV hue of (B, 3, H, W) by ``shift`` (B,) turns (exact RGB -> HSV -> RGB)."""
     r, g, b = x.unbind(1)
     maxc, _ = x.max(1)
     minc, _ = x.min(1)
     delta = maxc - minc
-    v = maxc
     s = torch.where(maxc > 0, delta / maxc.clamp_min(1e-8), torch.zeros_like(maxc))
     d = delta.clamp_min(1e-8)
     rc, gc, bc = (maxc - r) / d, (maxc - g) / d, (maxc - b) / d
     h = torch.where(maxc == r, bc - gc, torch.where(maxc == g, 2.0 + rc - bc, 4.0 + gc - rc))
     h = torch.where(delta > 0, (h / 6.0) % 1.0, torch.zeros_like(h))
-    h = (h + shift.view(-1, 1, 1)) % 1.0
-
-    i = torch.floor(h * 6.0)
-    fr = h * 6.0 - i
-    p = v * (1 - s)
-    q = v * (1 - s * fr)
-    t = v * (1 - s * (1 - fr))
-    i = i.long() % 6
-    choices = torch.stack(
-        [torch.stack(c, 1) for c in ((v, t, p), (q, v, p), (p, v, t), (p, q, v), (t, p, v), (v, p, q))], 0
-    )  # (6, B, 3, H, W)
-    return choices.gather(0, i.unsqueeze(0).unsqueeze(2).expand(1, -1, 3, -1, -1)).squeeze(0)
-
-
+    h6 = ((h + shift.view(-1, 1, 1)) % 1.0).unsqueeze(1) * 6.0  # (B, 1, H, W)
+    # closed-form HSV -> RGB: c_n = v - v s clamp(min(k, 4 - k), 0, 1), k = (n + 6h) mod 6, n = 5, 3, 1
+    k = torch.cat([h6 + 5.0, h6 + 3.0, h6 + 1.0], 1) % 6.0
+    v = maxc.unsqueeze(1)
+    return v - v * s.unsqueeze(1) * torch.minimum(k, 4.0 - k).clamp(0, 1)
 
 
 def color_augment(x: Tensor, max_num_transforms: int) -> Tensor:
-    """(B, 3, H, W) in [0, 1]; each sample gets ``max_num_transforms`` distinct color transforms."""
+    """(B, 3, H, W) in [0, 1]; each sample gets ``max_num_transforms`` distinct color transforms.
+
+    Free of host syncs: every transform runs on the whole batch, samples that did not draw it get the
+    identity parameter (factor 1, hue shift 0). Fixed order, like LeRobot's ImageTransforms.
+    """
     names = list(COLOR_RANGES)
     n = x.shape[0]
     k = min(max_num_transforms, len(names))
     picked = torch.rand(n, len(names), device=x.device).argsort(1)[:, :k]
     chosen = torch.zeros(n, len(names), dtype=torch.bool, device=x.device)
     chosen.scatter_(1, picked, True)
-    x = x.clone()
     for j, name in enumerate(names):
-        mask = chosen[:, j]
-        if not mask.any():
-            continue
-        sel = x[mask]
+        lo, hi = COLOR_RANGES[name]
+        f = torch.where(chosen[:, j], torch.empty(n, device=x.device).uniform_(lo, hi), 1.0 if name != "hue" else 0.0)
         if name == "hue":
-            out = _hue(sel, torch.empty(len(sel), device=x.device).uniform_(*COLOR_RANGES["hue"]))
+            x = _hue(x, f)
         else:
-            f = _uniform(len(sel), *COLOR_RANGES[name], x.device)
-            out = {"brightness": _brightness, "contrast": _contrast, "saturation": _saturation,
-                   "sharpness": _sharpness}[name](sel, f)
-        x[mask] = out
+            x = {"brightness": _brightness, "contrast": _contrast, "saturation": _saturation,
+                 "sharpness": _sharpness}[name](x, f.view(n, 1, 1, 1))
     return x
 
 
@@ -129,14 +119,13 @@ def random_homographies(n: int, height: int, width: int, zoom: tuple[float, floa
     cos, sin = torch.cos(a), torch.sin(a)
     one = torch.ones_like(s)
     # output -> input: dividing by the zoom factor makes zoom > 1 magnify the image.
-    m = torch.stack([
-        torch.stack([cos / s, -sin / s, tx], 1),
-        torch.stack([sin / s, cos / s, ty], 1),
-        torch.stack([px, py, one], 1),
+    # m in the isotropic frame, returned as from_iso @ m @ to_iso with to_iso = diag(aspect, 1, 1)
+    # written out element-wise: row 0 / aspect, column 0 * aspect
+    return torch.stack([
+        torch.stack([cos / s, -sin / s / aspect, tx / aspect], 1),
+        torch.stack([sin / s * aspect, cos / s, ty], 1),
+        torch.stack([px * aspect, py, one], 1),
     ], 1)
-    to_iso = torch.diag(torch.tensor([aspect, 1.0, 1.0], device=device))
-    from_iso = torch.diag(torch.tensor([1.0 / aspect, 1.0, 1.0], device=device))
-    return from_iso @ m @ to_iso
 
 
 def warp(x: Tensor, homographies: Tensor, mode: str) -> Tensor:
@@ -186,6 +175,11 @@ class DoorhandleAugment(nn.Module):
 
     @torch.no_grad()
     def forward(self, rgb: Tensor, depth: Tensor) -> tuple[Tensor, Tensor]:
+        # always float32, also when training under bf16 / fp16 autocast
+        with torch.autocast(rgb.device.type, enabled=False):
+            return self._augment(rgb.float(), depth.float())
+
+    def _augment(self, rgb: Tensor, depth: Tensor) -> tuple[Tensor, Tensor]:
         c = self.config
         n = rgb.shape[0]
         if c.color_augmentation:
@@ -194,8 +188,8 @@ class DoorhandleAugment(nn.Module):
             hom = random_homographies(n, rgb.shape[-2], rgb.shape[-1], tuple(c.geometric_zoom),
                                       c.geometric_rotation_deg, c.geometric_shift, c.geometric_perspective,
                                       rgb.device)
-            keep = torch.rand(n, device=rgb.device) >= c.geometric_prob
-            hom[keep] = torch.eye(3, device=rgb.device)
+            keep = torch.rand(n, 1, 1, device=rgb.device) >= c.geometric_prob
+            hom = torch.where(keep, torch.eye(3, device=rgb.device), hom)
             rgb = warp(rgb, hom, "bilinear")
             depth = warp(depth, hom, "nearest")
         if c.depth_augmentation:

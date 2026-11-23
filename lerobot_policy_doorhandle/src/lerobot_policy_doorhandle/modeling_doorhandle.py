@@ -65,6 +65,19 @@ class Backbone(nn.Module):
             ])
             self.channels = [128, 256, 512]
 
+    @property
+    def stem(self) -> nn.Conv2d:
+        """The widened 4-channel input conv."""
+        first = self.stages[0][0]
+        return first if isinstance(first, nn.Conv2d) else first[0]  # resnet18 | convnext stem block
+
+    def freeze(self, include_stem: bool) -> None:
+        for p in self.parameters():
+            p.requires_grad_(False)
+        if not include_stem:
+            for p in self.stem.parameters():
+                p.requires_grad_(True)
+
     def forward(self, x: Tensor) -> list[Tensor]:
         feats = []
         for i, stage in enumerate(self.stages):
@@ -110,6 +123,8 @@ class DoorhandlePolicy(PreTrainedPolicy):
         # -- network --
         weights = None if self._loading_checkpoint else config.pretrained_backbone_weights
         self.backbone = Backbone(config.vision_backbone, weights)
+        if config.freeze_backbone:
+            self.backbone.freeze(include_stem=config.freeze_backbone_stem)
         c = config.fpn_channels
         self.fpn = FeaturePyramidNetwork(self.backbone.channels, c)
         self.heatmap_head = nn.Sequential(
@@ -129,6 +144,14 @@ class DoorhandlePolicy(PreTrainedPolicy):
 
         self.augment = DoorhandleAugment(config)
         self.reset()
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        if self.config.freeze_backbone:
+            # frozen backbone = fixed pretrained feature extractor: BatchNorm statistics (resnet18) stay
+            # fixed and ConvNeXt's stochastic depth is off (the trainable stem conv has no train mode)
+            self.backbone.eval()
+        return self
 
     @classmethod
     def from_pretrained(cls, *args, **kwargs):
@@ -208,7 +231,8 @@ class DoorhandlePolicy(PreTrainedPolicy):
         glob = sum(pyramid[str(i)].float().mean((-2, -1)) for i in range(1, len(feats)))
 
         z = torch.cat([u, v, kp_depth, kp_desc.flatten(1), glob, state_n], 1)
-        out = self.out(self.mlp(z))
+        with torch.autocast(x.device.type, enabled=False):  # tiny head: keep log_var / loss in float32
+            out = self.out(self.mlp(z.float()))
         delta, log_var = out.chunk(2, -1)
         lo, hi = self.config.log_var_range
         base_n = self.normalize_action(state[:, self.base_index])
@@ -226,28 +250,30 @@ class DoorhandlePolicy(PreTrainedPolicy):
         loss = self.config.nll_weight * nll.mean()
 
         mean = self.unnormalize_action(mean_n)
-        info = {"loss_nll": nll.mean().item()}
+        logged = {"loss_nll": nll.mean()}
         if self.fk_index is not None:
             p_pred = gripper_position(*mean[:, self.fk_index].unbind(-1)) * 1000.0
             p_true = gripper_position(*target[:, self.fk_index].unbind(-1)) * 1000.0
             fk = F.huber_loss(p_pred, p_true, delta=self.config.fk_huber_delta_mm)
             loss = loss + self.config.fk_weight * fk
-            info["loss_fk"] = fk.item()
-            info["fk_mm"] = (p_pred - p_true).norm(dim=-1).mean().item()
+            logged["loss_fk"] = fk
+            logged["fk_mm"] = (p_pred - p_true).norm(dim=-1).mean()
         err = (mean - target).abs().mean(0)
-        for name, e in zip(self.config.action_joint_names, err.tolist()):
-            info[f"mae_{name}"] = e
-        info["sigma_mean"] = torch.exp(0.5 * log_var).mean().item()
+        for name, e in zip(self.config.action_joint_names, err):
+            logged[f"mae_{name}"] = e
+        logged["sigma_mean"] = torch.exp(0.5 * log_var).mean()
+        # one device -> host copy for all logged values (each .item() would be a separate sync)
+        info = dict(zip(logged, torch.stack([v.detach().float() for v in logged.values()]).tolist()))
         return loss, info
 
     def get_optim_params(self) -> list[dict]:
         backbone = [p for p in self.backbone.parameters() if p.requires_grad]
         ids = {id(p) for p in backbone}
         rest = [p for p in self.parameters() if p.requires_grad and id(p) not in ids]
-        return [
-            {"params": backbone, "lr": self.config.optimizer_lr * self.config.backbone_lr_scale},
-            {"params": rest},
-        ]
+        groups = [{"params": rest}]
+        if backbone:  # empty when the whole backbone is frozen
+            groups.insert(0, {"params": backbone, "lr": self.config.optimizer_lr * self.config.backbone_lr_scale})
+        return groups
 
     # -- inference -------------------------------------------------------------------------------
 
