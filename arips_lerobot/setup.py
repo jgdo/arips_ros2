@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'command_rate_limiter = arips_lerobot.command_rate_limiter:main',
+            'pregrasp_bags_to_lerobot = arips_lerobot.pregrasp_bags_to_lerobot:main',
         ],
     },
 )
