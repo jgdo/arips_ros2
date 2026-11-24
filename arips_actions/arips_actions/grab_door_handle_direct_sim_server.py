@@ -88,6 +88,12 @@ def pre_grab_link_3_pose(pre_grab_distance, back_side=False, z_offset=0.0):
     gy = lever_face_y - back * math.sin(approach_yaw)
     gz = HANDLE_SPINDLE_Z + PRE_GRAB_Z_OFFSET + z_offset
 
+    return gripper_to_link_3_pose(gx, gy, gz, approach_yaw)
+
+
+def gripper_to_link_3_pose(gx, gy, gz, approach_yaw):
+    """Return (x, y, z, yaw) of link_3 for the door gripper origin at (gx, gy, gz) pointing
+    along approach_yaw (horizontal), all in the same frame."""
     # Gripper -y points along the approach direction, so its (and link_3's) yaw is
     # approach_yaw + 90 deg. link_3 = gripper pose minus the rotated gripper offset.
     yaw = approach_yaw + math.pi / 2.0
@@ -104,8 +110,8 @@ def yaw_of(q):
 
 
 class GrabDoorHandleDirectSimServer(Node):
-    def __init__(self):
-        super().__init__('grab_door_handle_direct_sim_server')
+    def __init__(self, node_name='grab_door_handle_direct_sim_server'):
+        super().__init__(node_name)
 
         self.declare_parameters(
             namespace='',
@@ -208,10 +214,12 @@ class GrabDoorHandleDirectSimServer(Node):
             cancel_callback=self._cancel_callback,
             callback_group=callback_group,
         )
+        self.get_logger().info(self._ready_message())
+
+    def _ready_message(self):
         x, y, z, yaw = pre_grab_link_3_pose(self._pre_grab_distance)
-        self.get_logger().info(
-            f'GrabDoorHandle (direct sim) server ready, pre-grab {self._ik_link} in '
-            f'{self._map_frame}: ({x:.3f}, {y:.3f}, {z:.3f}), yaw {math.degrees(yaw):.1f} deg')
+        return (f'GrabDoorHandle (direct sim) server ready, pre-grab {self._ik_link} in '
+                f'{self._map_frame}: ({x:.3f}, {y:.3f}, {z:.3f}), yaw {math.degrees(yaw):.1f} deg')
 
     # ---- callbacks -------------------------------------------------------------------------
 
@@ -236,14 +244,12 @@ class GrabDoorHandleDirectSimServer(Node):
             return self._execute(goal_handle, goal_id)
 
     def _execute(self, goal_handle, goal_id):
-        self.get_logger().info('Executing GrabDoorHandle goal (direct sim)')
+        self.get_logger().info(f'Executing GrabDoorHandle goal ({self.get_name()})')
         self._publish_feedback(goal_handle, False)
 
-        target, back_side = self._pre_grab_target()
+        target, back_side, error = self._pre_grab_target(goal_handle, goal_id)
         if target is None:
-            return self._abort(
-                goal_handle,
-                f'No transform {self._map_frame} -> {self._planning_frame} for the pre-grab pose')
+            return self._stopped_or_abort(goal_handle, goal_id, error)
 
         if not self._ik_client.wait_for_service(timeout_sec=self._server_wait_timeout):
             return self._abort(goal_handle, 'compute_ik service not available')
@@ -417,8 +423,33 @@ class GrabDoorHandleDirectSimServer(Node):
         goal.trajectory = response.solution
         return goal
 
-    def _pre_grab_target(self):
-        """Return the pre-grab pose of the IK link in the planning frame, or None.
+    def _pre_grab_target(self, _goal_handle, _goal_id):
+        """Return (pre-grab pose of the IK link in the planning frame, back_side, error).
+
+        back_side negates the final gripper rotation (lever pointing left as seen from the
+        robot). On failure the pose is None and error says why.
+        """
+        # Robot north of the hinge -> it faces the handle on the leaf's +y face.
+        try:
+            robot = self._tf_buffer.lookup_transform(
+                self._map_frame, self._planning_frame, Time(),
+                timeout=Duration(seconds=self._tf_timeout)).transform.translation
+        except TransformException as ex:
+            self.get_logger().error(str(ex))
+            return None, False, (f'No transform {self._map_frame} -> {self._planning_frame} '
+                                 'for the pre-grab pose')
+        back_side = robot.y > DOOR_HINGE_Y
+        x, y, z, yaw = pre_grab_link_3_pose(
+            self._pre_grab_distance, back_side, self.get_parameter('door_z_offset').value)
+        target = self._map_pose_to_planning(x, y, z, yaw)
+        if target is None:
+            return None, False, (f'No transform {self._map_frame} -> {self._planning_frame} '
+                                 'for the pre-grab pose')
+        return target, back_side, ''
+
+    def _map_pose_to_planning(self, x, y, z, yaw):
+        """Return the map-frame pose (x, y, z, yaw) of the IK link as a PoseStamped in the
+        planning frame, or None without a transform.
 
         The arm can only set yaw about the robot's z axis, so the orientation is given as a
         pure yaw in the planning frame. A slightly tilted base does not make it unreachable.
@@ -429,19 +460,7 @@ class GrabDoorHandleDirectSimServer(Node):
                 timeout=Duration(seconds=self._tf_timeout))
         except TransformException as ex:
             self.get_logger().error(str(ex))
-            return None, False
-
-        # Robot north of the hinge -> it faces the handle on the leaf's +y face.
-        try:
-            robot = self._tf_buffer.lookup_transform(
-                self._map_frame, self._planning_frame, Time(),
-                timeout=Duration(seconds=self._tf_timeout)).transform.translation
-        except TransformException as ex:
-            self.get_logger().error(str(ex))
-            return None, False
-        back_side = robot.y > DOOR_HINGE_Y
-        x, y, z, yaw = pre_grab_link_3_pose(
-            self._pre_grab_distance, back_side, self.get_parameter('door_z_offset').value)
+            return None
         t, q = tf.transform.translation, tf.transform.rotation
         # Rotate the map point into the planning frame (full rotation) and translate.
         qv = (q.x, q.y, q.z)
@@ -459,7 +478,7 @@ class GrabDoorHandleDirectSimServer(Node):
         target.pose.position.z = pz
         target.pose.orientation.z = math.sin(local_yaw / 2.0)
         target.pose.orientation.w = math.cos(local_yaw / 2.0)
-        return target, back_side
+        return target
 
     def _joint_goal(self, group, positions):
         """Return a MoveGroup goal moving the joints of group to positions (name -> value)."""

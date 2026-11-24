@@ -8,6 +8,7 @@
   <license>BSD</license>
 
   <depend>arips_action_msgs</depend>
+  <depend>arips_keypoint_msgs</depend>
   <depend>arips_semantic_map_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>moveit_msgs</depend>
