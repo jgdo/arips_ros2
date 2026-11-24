@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>arips_gz_view_control</name>
+  <version>0.0.0</version>
+  <description>Gazebo GUI camera control plugin: gz-gui's InteractiveViewControl with the left and middle mouse buttons swapped (left drag orbits, middle drag pans)</description>
+  <maintainer email="markprediger@gmail.com">jgdo</maintainer>
+  <!-- src/AripsViewControl.* are modified copies of gz-gui 10.1.0 (Apache-2.0) -->
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>gz_gui_vendor</depend>
+  <depend>gz_rendering_vendor</depend>
+  <depend>gz_transport_vendor</depend>
+  <depend>gz_msgs_vendor</depend>
+  <depend>gz_plugin_vendor</depend>
+  <depend>gz_common_vendor</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
