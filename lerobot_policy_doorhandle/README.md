@@ -133,11 +133,60 @@ lerobot-train \
 | flag | does | parameters (defaults) |
 |---|---|---|
 | `color_augmentation` | brightness, contrast, saturation, hue, sharpness (RGB only); `color_max_num_transforms` of them per sample | ranges of LeRobot's `ImageTransformsConfig` |
-| `geometric_augmentation` | one random homography per sample, applied identically to RGB (bilinear) and depth (nearest); pixels from outside the image become black / invalid depth | `geometric_prob` 0.8, `geometric_zoom` [0.9, 1.1], `geometric_rotation_deg` 5, `geometric_shift` 0.05, `geometric_perspective` 0.05 |
-| `depth_augmentation` | relative Gaussian noise, random rectangular holes, pixel dropout | `depth_prob` 0.8, `depth_noise_std` 0.01, `depth_max_holes` 3, `depth_hole_size` 0.15, `depth_dropout` 0.01 |
+| `geometric_augmentation` | one random rigid transform per sample (rotation about the image centre + shift; no zoom, no perspective, so depth values stay consistent with the image), applied identically to RGB (bilinear) and depth (nearest); pixels from outside the image become black / invalid depth | `geometric_prob` 0.8, `geometric_rotation_deg` 5, `geometric_shift` 0.05 |
+| `depth_augmentation` | additive uniform noise of fixed size (independent of the distance), random rectangular holes, pixel dropout | `depth_prob` 0.8, `depth_noise_mm` 0.5 (±0.5 mm), `depth_max_holes` 3, `depth_hole_size` 0.15, `depth_dropout` 0.01 |
 | `state_noise` | Gaussian noise on `observation.state` (raw units) | `state_noise_std` (0.005 m, then 1° for each rotary joint) |
 
 State noise is added before the residual base is taken, so the network cannot simply copy q_current. It has to use the image.
+
+### Geometric keypoints (xyz)
+
+**Not for the real robot.** These options build the camera model, the `kinect_joint` tilt geometry and the arm's analytic IK into the model at inference. That needs a rigid, calibrated camera and arm mount. The real robot's mount is wobbly and cannot be fixed physically, so the deployed model must depend only on the images and the joint states. The options stay as a simulation experiment. The model used by `nav2_grab_policy.launch.py` is `doorhandle_pull_right_30_all_new_aug`, which uses none of them.
+
+With only 30 training episodes, the appearance features (keypoint descriptors, global feature, u/v) let the MLP memorise the episodes. The prediction then regresses toward the mean door height, and validation error grows with training. In simulation the handle height is fully observable from geometry: the 3D z of the handle pixels, from depth plus the camera pose given by `kinect_joint`, predicts the slider label to 0.3–0.6 mm. These options make the model use that geometry. All default to off, so old checkpoints load unchanged.
+
+| option | does |
+|---|---|
+| `xyz_keypoints` | Back-projects depth to a point map in base_link. Uses `camera_hfov`, `camera_tilt_joint` (state joint), `camera_tilt_origin` and `camera_in_tilt_link`, taken from the sim URDF. Feeds each keypoint's attention-weighted xyz and valid fraction to the MLP. Geometric augmentation warps the point map together with the image, so the points stay exact. |
+| `xyz_fullres` | Reads the xyz out with full-resolution attention (upsampled logits) instead of stride-8 pooling. |
+| `xyz_refine` | Adds a small full-resolution conv net that refines the attention logits (needs `xyz_fullres`). |
+| `xyz_aux_weight`, `xyz_aux_dims` | Auxiliary Huber loss (`xyz_aux_huber_delta_mm`) that pulls keypoint 0 to a point fixed relative to the target door gripper, with a learned offset. `"z"` supervises only the height; `"xyz"` supervises the full point, with the offset rotated by the link_3 yaw. |
+| `xyz_normals`, `normal_aux_weight` | Surface normals from the point map, read out per keypoint. The aux loss pulls keypoint 1's normal to the door normal, i.e. the target link_3 yaw + `normal_aux_yaw_offset_deg` (−90°). |
+| `xyz_skip` | Adds a linear path from (keypoint xyz, state) to the output, next to the MLP. |
+| `slider_from_keypoint` | Slider = keypoint 0 z − offset − `GRIPPER_Z_ABOVE_SLIDER`. Replaces the MLP's slider mean. |
+| `ik_from_keypoints` | Residual base = analytic IK (`kinematics.arm_ik`) of the door gripper pose given by keypoint 0's xyz and keypoint 1's normal, instead of q_current. Needs `xyz_aux_dims="xyz"` and `xyz_normals`. |
+| `keypoint_uv`, `keypoint_depth`, `keypoint_descriptors`, `global_feature` | Turn the appearance and image-position features off ("geometry only"). This was what stopped the memorisation. |
+
+The validation numbers are in [Validation results](#validation-results) below.
+
+### Training-only keypoint supervision (`uv_aux_weight`)
+
+`uv_aux_weight` > 0 adds a training-only loss: keypoint 0's image position (u, v) is pulled to the target door gripper point and keypoint 1's to the current door gripper point. Both are projected into the augmented image with the camera model above and the measured `kinect_joint` (`uv_aux_huber_delta_px`, points outside the image are skipped). The labels only steer the attention to the handle and the gripper. Inference does not use the camera model, so the model's inputs stay the images and the joint states (`test_uv_aux_is_training_only` checks this). Not evaluated yet.
+
+#### Validation results
+
+All runs used the 30 pull_right training episodes. Evaluation is on the 5 held-out episodes of `pregrasp_gazebo_pull_right_val_5_288x384`, with door heights the model hasn't seen. The rows come from the training script's bf16 evaluation. `python -m lerobot_policy_doorhandle.evaluate` runs in fp32 and gives slightly lower numbers for the ik_from_keypoints model: 1.13 mm, 0.11°, 1.2 mm at 10k steps, and 0.51 mm, 0.10°, 0.6 mm at 20k.
+
+| configuration | steps | slider MAE | j4 MAE | gripper position mean (first frame) |
+|---|---|---|---|---|
+| appearance features (all_new_aug, 005000) | 5k | 3.6 mm | 4.0° | 10.5 (18.3) mm |
+| appearance features (all_new_aug, 025000) | 25k | 7.1 mm | 4.9° | 10.8 (14.1) mm |
+| + xyz keypoints, z aux, geometry only | 10k | 1.3 mm | 4.3° | 8.4 (14.1) mm |
+| + xyz aux (`xyz_aux_dims=xyz`) | 10k | 1.1 mm | 4.3° | 7.5 (12.3) mm |
+| + normals + `ik_from_keypoints` | 10k | 1.2 mm | 0.2° | 1.4 (1.4) mm |
+| same | 20k | 0.6 mm | 0.3° | 1.0 (1.0) mm |
+
+The first frame is the hardest case, because the residual base is still far from the target.
+
+- **Best geometric combination (simulation only, see the note above):**
+  ```
+  xyz_keypoints xyz_fullres xyz_skip xyz_aux_weight=0.1 xyz_aux_dims=xyz xyz_normals normal_aux_weight=0.1 ik_from_keypoints
+  ```
+  with the four appearance features off.
+- **Steps:** 20k steps gave the best model. However, the IK path occasionally produces a non-finite gradient followed by a loss spike, and one of four 20k runs collapsed after about 7.5k steps; the other three ended at 0.5–0.9 mm. `lerobot-train` has no guard against non-finite gradients, so add one before using this config there (see the model README).
+- **`ik_detach_base`:** detaching the IK base was clearly less accurate (j4 6° at 5k steps).
+
+The geometric model (simulation only) is `src/arips_lerobot_data/train/doorhandle_pull_right_30_geo_ik`.
 
 ### Training speed
 

@@ -9,7 +9,8 @@ from lerobot.configs import FeatureType, PolicyFeature, PreTrainedConfig
 
 from lerobot_policy_doorhandle.augment import depth_augment, random_homographies, warp
 from lerobot_policy_doorhandle.configuration_doorhandle import DoorhandleConfig
-from lerobot_policy_doorhandle.kinematics import gripper_position, link_3_pose
+from lerobot_policy_doorhandle.kinematics import (GRIPPER_Z_ABOVE_SLIDER, camera_points, gripper_position, link_3_pose,
+                                                  project_points)
 from lerobot_policy_doorhandle.modeling_doorhandle import DoorhandlePolicy
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -171,7 +172,7 @@ def test_augmentation():
     policy = DoorhandlePolicy(cfg).to(DEVICE)
     rgb = torch.rand(8, 3, 96, 128, device=DEVICE)
     depth = 0.3 + torch.rand(8, 1, 96, 128, device=DEVICE)
-    rgb_a, depth_a = policy.augment(rgb, depth)
+    rgb_a, depth_a, _ = policy.augment(rgb, depth)
     assert rgb_a.shape == rgb.shape and depth_a.shape == depth.shape
     assert rgb_a.min() >= 0 and rgb_a.max() <= 1
     assert (depth_a == 0).any()  # holes / dropout / outside the warped image
@@ -182,13 +183,29 @@ def test_augmentation():
     eye = torch.eye(3, device=DEVICE).expand(8, 3, 3)
     assert torch.allclose(warp(rgb, eye, "bilinear"), rgb, atol=1e-5)
     assert torch.equal(warp(depth, eye, "nearest"), depth)
-    # zoom only (no rotation / shift / tilt): magnifies around the centre
-    hom = random_homographies(2, 96, 128, (2.0, 2.0), 0.0, 0.0, 0.0, DEVICE)
-    assert torch.allclose(hom[0], torch.diag(torch.tensor([0.5, 0.5, 1.0], device=DEVICE)), atol=1e-6)
+    # no rotation / shift: identity; otherwise rigid (no zoom, no perspective)
+    hom = random_homographies(2, 96, 128, 0.0, 0.0, DEVICE)
+    assert torch.allclose(hom, torch.eye(3, device=DEVICE).expand(2, 3, 3), atol=1e-6)
+    hom = random_homographies(64, 96, 128, 30.0, 0.2, DEVICE)
+    assert torch.all(hom[:, 2, :2] == 0) and torch.all(hom[:, 2, 2] == 1)
+    aspect = 128 / 96
+    iso = hom[:, :2, :2] * torch.tensor([[1.0, aspect], [1 / aspect, 1.0]], device=DEVICE)
+    assert torch.allclose(torch.linalg.det(iso), torch.ones(64, device=DEVICE), atol=1e-5)  # no scaling
+    # a pure shift moves the depth image without changing its values
+    shift = torch.eye(3, device=DEVICE).expand(8, 3, 3).clone()
+    shift[:, 1, 2] = 2 * 4 / 96  # 4 pixels down in the input = content moves up
+    moved = warp(depth, shift, "nearest")
+    assert torch.equal(moved[..., :-4, :], depth[..., 4:, :])
 
     holes = depth_augment(depth, 0.0, 3, 0.5, 0.0)
     kept = holes > 0
     assert torch.allclose(holes[kept], depth[kept])
+
+    # noise: uniform +-0.5 mm, the same at every distance
+    noisy = depth_augment(depth, 0.5, 0, 0.0, 0.0)
+    diff = noisy - depth
+    assert diff.abs().max() <= 0.0005 + 1e-6 and diff.abs().max() > 0.0004
+    assert diff.std().item() == pytest.approx(0.0005 / math.sqrt(3), rel=0.05)
 
 
 def test_forward_kinematics():
@@ -218,3 +235,113 @@ def test_config_validation():
     cfg.input_features.pop("observation.images.kinect_depth")
     with pytest.raises(ValueError):
         cfg.validate_features()
+
+
+def test_camera_points():
+    origin, cam = (0.14, -0.005, 1.4114), (0.035, 0.0, 0.05)
+    depth = torch.zeros(1, 1, 4, 6)
+    depth[0, 0, 1:3, 2:4] = 0.5  # the 4 pixels around the image centre
+    # tilt 0: the camera looks along base_link +x
+    p = camera_points(depth, torch.zeros(1), 1.5, origin, cam)[0]
+    centre = p[:, 1:3, 2:4].mean((-2, -1))
+    assert torch.allclose(centre, torch.tensor([0.14 + 0.035 + 0.5, -0.005, 1.4114 + 0.05]), atol=1e-6)
+    assert p[1, 1, 2] > p[1, 1, 3]  # image left = base_link +y
+    assert p[2, 1, 2] > p[2, 2, 2]  # image up = base_link +z
+    # tilt -pi/2 (kinect_joint axis is -y): looking straight down, camera "up" is base_link +x
+    p = camera_points(depth, torch.tensor([-math.pi / 2]), 1.5, origin, cam)[0]
+    centre = p[:, 1:3, 2:4].mean((-2, -1))
+    assert torch.allclose(centre, torch.tensor([0.14 + 0.05, -0.005, 1.4114 - 0.035 - 0.5]), atol=1e-6)
+    assert p[0, 1, 2] > p[0, 2, 2]
+
+
+def test_xyz_keypoints_aux_and_structural_slider(tmp_path):
+    cfg = all_augment_config(xyz_keypoints=True, xyz_fullres=True, xyz_refine=True, xyz_skip=True,
+                             xyz_aux_weight=0.1, slider_from_keypoint=True, keypoint_uv=False,
+                             keypoint_depth=False, keypoint_descriptors=False, global_feature=False)
+    policy = DoorhandlePolicy(cfg).to(DEVICE).train()
+    batch = make_batch()
+    loss, info = policy(batch)
+    assert torch.isfinite(loss) and "loss_xyz_aux" in info
+    loss.backward()
+    assert policy.xyz_aux_offset.grad is not None
+    assert policy.refine[-1].weight.grad.abs().sum() > 0  # zero-initialised last layer
+    policy.eval()
+    mean, _ = policy.predict_with_uncertainty(batch)
+    # slider = keypoint 0 z - offset - gripper height above the slider
+    expected = policy._kp_xyz[:, 0, 2] - policy.xyz_aux_offset[-1] - GRIPPER_Z_ABOVE_SLIDER
+    assert torch.allclose(mean[:, 0], expected, atol=1e-5)
+    policy.save_pretrained(tmp_path)
+    loaded = DoorhandlePolicy.from_pretrained(tmp_path).to(DEVICE).eval()
+    assert torch.allclose(loaded.predict_with_uncertainty(batch)[0], mean, atol=1e-5)
+    for dims in ("z", "xyz"):
+        p = DoorhandlePolicy(make_config(xyz_keypoints=True, xyz_aux_weight=0.1, xyz_aux_dims=dims))
+        assert p.aux_target(batch["action"].cpu()).shape == (4, 1 if dims == "z" else 3)
+
+
+def test_arm_ik_inverts_fk():
+    from lerobot_policy_doorhandle.kinematics import arm_ik
+    q = torch.tensor([[0.77, -0.9, 2.1, 0.3], [0.6, -0.4, 1.9, -0.2]], dtype=torch.float64)
+    g = gripper_position(*q.unbind(-1))
+    yaw = link_3_pose(*q.unbind(-1))[3]
+    j2, j3, j4 = arm_ik(g[:, 0], g[:, 1], yaw)
+    assert torch.allclose(torch.stack([j2, j3, j4], 1), q[:, 1:], atol=1e-9)
+
+
+def test_ik_from_keypoints():
+    cfg = all_augment_config(xyz_keypoints=True, xyz_fullres=True, xyz_skip=True, xyz_aux_weight=0.1,
+                             xyz_aux_dims="xyz", xyz_normals=True, normal_aux_weight=0.1,
+                             ik_from_keypoints=True, keypoint_uv=False, keypoint_depth=False,
+                             keypoint_descriptors=False, global_feature=False)
+    policy = DoorhandlePolicy(cfg).to(DEVICE).train()
+    batch = make_batch()
+    loss, info = policy(batch)
+    assert torch.isfinite(loss)
+    loss.backward()
+    assert policy.xyz_aux_offset.grad is not None
+    policy.eval()
+    mean, sigma = policy.predict_with_uncertainty(batch)
+    assert torch.isfinite(mean).all() and torch.isfinite(sigma).all()
+
+
+def test_project_points_inverts_camera_points():
+    cfg = make_config()
+    depth = 0.3 + 0.5 * torch.rand(2, 1, 96, 128)
+    tilt = torch.tensor([0.2, 0.7])
+    pts = camera_points(depth, tilt, cfg.camera_hfov, cfg.camera_tilt_origin, cfg.camera_in_tilt_link)
+    for i, j in [(0, 0), (50, 70), (95, 127)]:
+        u, v, z = project_points(pts[:, :, i, j], tilt, cfg.camera_hfov, (96, 128), cfg.camera_tilt_origin,
+                                 cfg.camera_in_tilt_link)
+        assert torch.allclose((u + 1) / 2 * 128 - 0.5, torch.full_like(u, float(j)), atol=1e-3)
+        assert torch.allclose((v + 1) / 2 * 96 - 0.5, torch.full_like(v, float(i)), atol=1e-3)
+        assert torch.allclose(z, depth[:, 0, i, j], atol=1e-5)
+
+
+def test_uv_aux_is_training_only():
+    cfg = all_augment_config(uv_aux_weight=0.01, keypoint_descriptors=False, global_feature=False)
+    policy = DoorhandlePolicy(cfg).to(DEVICE).train()
+    batch = make_batch()
+    loss, info = policy(batch)
+    assert torch.isfinite(loss) and "loss_uv_aux" in info
+    loss.backward()
+    assert policy.heatmap_head[-1].weight.grad.abs().sum() > 0
+    # inference does not use the camera model: changing it leaves the prediction unchanged
+    policy.eval()
+    mean_a, _ = policy.predict_with_uncertainty(batch)
+    policy.config.camera_hfov = 1.0
+    policy.config.camera_tilt_origin = (0.0, 0.0, 0.5)
+    mean_b, _ = policy.predict_with_uncertainty(batch)
+    assert torch.equal(mean_a, mean_b)
+
+
+def test_uv_aux_labels_follow_the_warp():
+    cfg = make_config(uv_aux_weight=0.01)
+    policy = DoorhandlePolicy(cfg).to(DEVICE)
+    batch = make_batch(2)
+    state, target = batch["observation.state"], batch["action"]
+    policy._homographies = None
+    uv0, _ = policy.uv_aux_target(state, target)
+    shift = torch.eye(3, device=DEVICE).repeat(2, 1, 1)
+    shift[:, 0, 2], shift[:, 1, 2] = 0.1, -0.05  # output -> input: input = output + t
+    policy._homographies = shift
+    uv1, _ = policy.uv_aux_target(state, target)
+    assert torch.allclose(uv1, uv0 - torch.tensor([0.1, -0.05], device=DEVICE), atol=1e-5)

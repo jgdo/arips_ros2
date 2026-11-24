@@ -2,9 +2,11 @@
 
 - color: LeRobot's default color transforms (brightness, contrast, saturation, hue, sharpness), each
   sample draws ``max_num_transforms`` of them with its own parameters (same as lerobot_policy_target_reach).
-- geometric: one random homography per sample (zoom, rotation, shift, perspective tilt), applied
-  identically to RGB (bilinear) and depth (nearest, so no invalid / edge depths get blended).
-- depth: multiplicative noise, random rectangular holes and pixel dropout (holes = 0 = invalid).
+- geometric: one random rigid image transform per sample (rotation about the image centre plus a
+  shift), applied identically to RGB (bilinear) and depth (nearest, so no invalid / edge depths get
+  blended). No zoom and no perspective tilt: the apparent size stays consistent with the depth values.
+- depth: additive uniform noise of fixed size (+-depth_noise_mm, independent of the distance), random
+  rectangular holes and pixel dropout (holes = 0 = invalid).
 Joint noise is added in the model (it needs the raw state).
 """
 
@@ -103,28 +105,25 @@ def color_augment(x: Tensor, max_num_transforms: int) -> Tensor:
     return x
 
 
-def random_homographies(n: int, height: int, width: int, zoom: tuple[float, float], rotation_deg: float,
-                        shift: float, perspective: float, device) -> Tensor:
-    """(n, 3, 3) maps from output to input in normalized grid coordinates ([-1, 1] spans the image).
+def random_homographies(n: int, height: int, width: int, rotation_deg: float, shift: float,
+                        device) -> Tensor:
+    """(n, 3, 3) rigid maps (rotation about the centre + shift) from output to input, in normalized
+    grid coordinates ([-1, 1] spans the image). No scaling, so the image is neither zoomed nor tilted.
 
     Built in an isotropic frame (x scaled by the aspect ratio) so rotations stay rotations.
     """
     aspect = width / height
-    s = torch.empty(n, device=device).uniform_(*zoom)
     a = torch.empty(n, device=device).uniform_(-rotation_deg, rotation_deg) * (math.pi / 180)
     tx = torch.empty(n, device=device).uniform_(-shift, shift) * 2 * aspect
     ty = torch.empty(n, device=device).uniform_(-shift, shift) * 2
-    px = torch.empty(n, device=device).uniform_(-perspective, perspective) / aspect
-    py = torch.empty(n, device=device).uniform_(-perspective, perspective)
     cos, sin = torch.cos(a), torch.sin(a)
-    one = torch.ones_like(s)
-    # output -> input: dividing by the zoom factor makes zoom > 1 magnify the image.
+    zero, one = torch.zeros_like(a), torch.ones_like(a)
     # m in the isotropic frame, returned as from_iso @ m @ to_iso with to_iso = diag(aspect, 1, 1)
     # written out element-wise: row 0 / aspect, column 0 * aspect
     return torch.stack([
-        torch.stack([cos / s, -sin / s / aspect, tx / aspect], 1),
-        torch.stack([sin / s * aspect, cos / s, ty], 1),
-        torch.stack([px * aspect, py, one], 1),
+        torch.stack([cos, -sin / aspect, tx / aspect], 1),
+        torch.stack([sin * aspect, cos, ty], 1),
+        torch.stack([zero, zero, one], 1),
     ], 1)
 
 
@@ -140,11 +139,12 @@ def warp(x: Tensor, homographies: Tensor, mode: str) -> Tensor:
     return F.grid_sample(x, grid.view(b, h, w, 2), mode=mode, padding_mode="zeros", align_corners=False)
 
 
-def depth_augment(depth: Tensor, noise_std: float, max_holes: int, hole_size: float, dropout: float) -> Tensor:
-    """(B, 1, H, W) depth in metres, 0 = invalid: relative noise, rectangular holes, pixel dropout."""
+def depth_augment(depth: Tensor, noise_mm: float, max_holes: int, hole_size: float, dropout: float) -> Tensor:
+    """(B, 1, H, W) depth in metres, 0 = invalid: uniform noise in [-noise_mm, noise_mm] millimetres
+    (the same at every distance), rectangular holes, pixel dropout."""
     b, _, h, w = depth.shape
     valid = depth > 0
-    depth = depth * (1 + noise_std * torch.randn_like(depth))
+    depth = depth + (torch.rand_like(depth) * 2 - 1) * (noise_mm / 1000.0)
     invalid = torch.rand_like(depth) < dropout
     if max_holes > 0:
         n_holes = torch.randint(0, max_holes + 1, (b, 1), device=depth.device)
@@ -167,6 +167,7 @@ class DoorhandleAugment(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.last_homographies = None  # (B, 3, 3) output -> input of the last geometric warp, or None
 
     @property
     def enabled(self) -> bool:
@@ -174,26 +175,33 @@ class DoorhandleAugment(nn.Module):
         return c.color_augmentation or c.geometric_augmentation or c.depth_augmentation
 
     @torch.no_grad()
-    def forward(self, rgb: Tensor, depth: Tensor) -> tuple[Tensor, Tensor]:
+    def forward(self, rgb: Tensor, depth: Tensor, points_fn=None) -> tuple[Tensor, Tensor, Tensor | None]:
+        """-> (rgb, depth, points). ``points_fn(depth) -> (B, C, H, W)`` (optional) maps the noisy depth
+        to a per-pixel point map before the geometric warp, so the points move with their pixels."""
         # always float32, also when training under bf16 / fp16 autocast
         with torch.autocast(rgb.device.type, enabled=False):
-            return self._augment(rgb.float(), depth.float())
+            return self._augment(rgb.float(), depth.float(), points_fn)
 
-    def _augment(self, rgb: Tensor, depth: Tensor) -> tuple[Tensor, Tensor]:
+    def _augment(self, rgb: Tensor, depth: Tensor, points_fn=None) -> tuple[Tensor, Tensor, Tensor | None]:
         c = self.config
         n = rgb.shape[0]
         if c.color_augmentation:
             rgb = color_augment(rgb, c.color_max_num_transforms)
-        if c.geometric_augmentation:
-            hom = random_homographies(n, rgb.shape[-2], rgb.shape[-1], tuple(c.geometric_zoom),
-                                      c.geometric_rotation_deg, c.geometric_shift, c.geometric_perspective,
-                                      rgb.device)
-            keep = torch.rand(n, 1, 1, device=rgb.device) >= c.geometric_prob
-            hom = torch.where(keep, torch.eye(3, device=rgb.device), hom)
-            rgb = warp(rgb, hom, "bilinear")
-            depth = warp(depth, hom, "nearest")
+        # depth noise / holes are per pixel, so applying them before the warp is equivalent
         if c.depth_augmentation:
-            aug = depth_augment(depth, c.depth_noise_std, c.depth_max_holes, c.depth_hole_size, c.depth_dropout)
+            aug = depth_augment(depth, c.depth_noise_mm, c.depth_max_holes, c.depth_hole_size, c.depth_dropout)
             apply = (torch.rand(n, 1, 1, 1, device=depth.device) < c.depth_prob)
             depth = torch.where(apply, aug, depth)
-        return rgb, depth
+        points = points_fn(depth) if points_fn is not None else None
+        self.last_homographies = None
+        if c.geometric_augmentation:
+            hom = random_homographies(n, rgb.shape[-2], rgb.shape[-1], c.geometric_rotation_deg,
+                                      c.geometric_shift, rgb.device)
+            keep = torch.rand(n, 1, 1, device=rgb.device) >= c.geometric_prob
+            hom = torch.where(keep, torch.eye(3, device=rgb.device), hom)
+            self.last_homographies = hom
+            rgb = warp(rgb, hom, "bilinear")
+            depth = warp(depth, hom, "nearest")
+            if points is not None:
+                points = warp(points, hom, "nearest")
+        return rgb, depth, points
