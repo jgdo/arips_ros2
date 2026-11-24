@@ -84,8 +84,11 @@ def classify_beams(origins, directions, ranges, seg_a, seg_b, range_tolerance,
     crossing = ((np.abs(denom) > min_sin_incidence * seg_len[:, None])
                 & (tau >= 0.0) & (tau <= 1.0) & (r_int > 0.0))
     r = ranges[None, :]
-    hit = crossing & (np.abs(r - r_int) <= range_tolerance)
-    through = crossing & (r > r_int + range_tolerance)
+    # np.logical_and instead of "&": with Python 3.14 numpy's temporary elision treated the local
+    # "crossing" as a temporary for arrays > 256 KiB and overwrote it in place with "hit", so an
+    # open door reported 0 crossing beams.
+    hit = np.logical_and(crossing, np.abs(r - r_int) <= range_tolerance)
+    through = np.logical_and(crossing, r > r_int + range_tolerance)
     return hit, through
 
 
