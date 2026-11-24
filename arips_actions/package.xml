@@ -18,6 +18,9 @@
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
   <exec_depend>python3-numpy</exec_depend>
+  <!-- image decoding helpers and command_rate_limiter for grab_door_handle_policy_server;
+       the model itself (lerobot_policy_doorhandle, torch) comes from the workspace venv -->
+  <exec_depend>arips_lerobot</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 

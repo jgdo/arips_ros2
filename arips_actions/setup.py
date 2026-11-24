@@ -27,6 +27,8 @@ setup(
             'arips_actions.grab_door_handle_server:main',
             'grab_door_handle_direct_sim_server = '
             'arips_actions.grab_door_handle_direct_sim_server:main',
+            'grab_door_handle_policy_server = '
+            'arips_actions.grab_door_handle_policy_server:main',
             'drive_around_pivot_server = '
             'arips_actions.drive_around_pivot_server:main',
             'drive_forward_server = '

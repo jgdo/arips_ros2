@@ -38,6 +38,16 @@ components:
     dependencies: [joint_trajectory_server]
     arguments:
       use_sim_time: 'true'
+  # Navigation plus all arips_actions servers, with the learned GrabDoorHandle server
+  # (doorhandle model + command_rate_limiter) instead of the direct sim one. Start either this
+  # or full_navigation (+ arips_actions), never both.
+  full_navigation_policy:
+    package: arips_launch
+    file: launch/nav2_grab_policy.launch.py
+    dependencies: [move_group]
+    arguments:
+      use_sim_time: 'true'
+      use_composition: 'true'
   # Action servers of the navigation behavior trees. They need move_group (compute_ik and
   # compute_cartesian_path) to be up when they start.
   arips_actions:
