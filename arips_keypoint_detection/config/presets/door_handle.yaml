@@ -1,0 +1,9 @@
+# Keypoint annotation preset, offered when starting a new annotation in keypoint_annotator.
+# tag:         default annotation tag (letters, digits, _ and -); can be changed in the dialog
+# description: shown in the preset selection
+# keypoints:   keypoint names in index order (left click = keypoint 0, right click = keypoint 1)
+tag: door_handle
+description: Door handle lever, start and end point
+keypoints:
+  - handle_start
+  - handle_end

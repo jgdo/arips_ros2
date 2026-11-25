@@ -10,11 +10,11 @@ The arm makes these moves:
    spindle (raised by PRE_GRAB_Z_OFFSET), and its front edge pre_grab_distance in front of
    the handle lever. If this pose has no IK solution from the robot's current base pose,
    the goal fails without moving the arm. Before the arm moves, the door gripper joint
-   turns to pre_grab_gripper_rotation (lever slot horizontal).
+   turns to pre_grab_gripper_rotation_deg (lever slot horizontal).
 2. Forward: a straight Cartesian line (compute_cartesian_path, then execute_trajectory) of
    forward_distance along the gripper's pointing direction, starting from the arm's actual
    pose after move 1, orientation unchanged. Fails unless the whole line is feasible.
-3. Rotate: the door gripper joint turns to gripper_rotation (MoveIt, door gripper group).
+3. Rotate: the door gripper joint turns to gripper_rotation_deg (MoveIt, door gripper group).
 
 The goal's prompt is ignored; max_duration_s > 0 limits the arm motion (planning and
 execution) instead of the execution_timeout_s parameter.
@@ -116,7 +116,7 @@ class GrabDoorHandleDirectSimServer(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('map_frame', 'map'),
+                ('map_frame', 'base_link'), # TODO
                 # MoveIt planning frame (root link of the robot model)
                 ('planning_frame', 'base_link'),
                 ('planning_group', 'arm'),
@@ -130,8 +130,8 @@ class GrabDoorHandleDirectSimServer(Node):
                 ('door_z_offset', 0.0),
                 # Straight move of the gripper along its pointing direction after pre-grab
                 ('forward_distance', 0.045),
-                ('forward_velocity_scaling', 0.1),
-                ('forward_acceleration_scaling', 0.1),
+                ('forward_velocity_scaling', 0.5),
+                ('forward_acceleration_scaling', 0.5),
                 # Cartesian interpolation step and max joint change between two steps
                 ('forward_max_step', 0.002),
                 ('forward_revolute_jump_threshold', 0.3),
@@ -139,13 +139,13 @@ class GrabDoorHandleDirectSimServer(Node):
                 ('compute_cartesian_path_service', '/compute_cartesian_path'),
                 ('gripper_group', 'door_gripper_group'),
                 ('gripper_joint', 'joint_door_gripper'),
-                # Door gripper joint position for the pre-grab pose [rad]
-                ('pre_grab_gripper_rotation', 0.0),
-                # Final door gripper joint position after the forward move [rad]
-                ('gripper_rotation', 0.165),
+                # Door gripper joint position for the pre-grab pose [deg]
+                ('pre_grab_gripper_rotation_deg', 0.0),
+                # Final door gripper joint position after the forward move [deg]
+                ('gripper_rotation_deg', 40.0),
                 ('execute_trajectory_action', '/execute_trajectory'),
                 ('ik_timeout_s', 1.0),
-                ('ik_avoid_collisions', True),
+                ('ik_avoid_collisions', False),
                 ('planning_time_s', 5.0),
                 ('planning_attempts', 5),
                 ('max_velocity_scaling', 0.5),
@@ -173,8 +173,6 @@ class GrabDoorHandleDirectSimServer(Node):
         self._forward_prismatic_jump = p('forward_prismatic_jump_threshold')
         self._gripper_group = p('gripper_group')
         self._gripper_joint = p('gripper_joint')
-        self._pre_grab_gripper_rotation = p('pre_grab_gripper_rotation')
-        self._gripper_rotation = p('gripper_rotation')
         self._ik_timeout = p('ik_timeout_s')
         self._ik_avoid_collisions = p('ik_avoid_collisions')
         self._planning_time = p('planning_time_s')
@@ -292,11 +290,12 @@ class GrabDoorHandleDirectSimServer(Node):
         # The gripper and the arm are separate groups and joint_trajectory_server runs one
         # command at a time, so the gripper turns first (this also releases the lever if a
         # previous goal left the gripper turned), then the arm moves.
+        pre_grab_gripper_rotation = math.radians(self.get_parameter('pre_grab_gripper_rotation_deg').value)
         failure = self._run_move(
             self._joint_goal(
-                self._gripper_group, {self._gripper_joint: self._pre_grab_gripper_rotation}),
+                self._gripper_group, {self._gripper_joint: pre_grab_gripper_rotation}),
             goal_handle, goal_id, deadline,
-            f'pre-grab gripper rotation {self._pre_grab_gripper_rotation:.3f} rad')
+            f'pre-grab gripper rotation {pre_grab_gripper_rotation:.3f} rad')
         if failure is not None:
             return failure
 
@@ -319,7 +318,8 @@ class GrabDoorHandleDirectSimServer(Node):
         self.get_logger().info(f'Moved {self._forward_distance:.3f} m forward')
 
         # The lever of the back handle points the other way as seen from the gripper.
-        rotation = -self._gripper_rotation if back_side else self._gripper_rotation
+        gripper_rotation = math.radians(self.get_parameter('gripper_rotation_deg').value)
+        rotation = -gripper_rotation if back_side else gripper_rotation
         failure = self._run_move(
             self._joint_goal(self._gripper_group, {self._gripper_joint: rotation}),
             goal_handle, goal_id, deadline,

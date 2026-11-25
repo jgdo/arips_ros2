@@ -1,10 +1,11 @@
-"""Keypoint annotation tool for RGB-D datasets created by extract_rgbd_dataset.
+"""Keypoint annotation tool for RGB-D or RGB-only datasets created by extract_rgbd_dataset.
 
 usage:
   ros2 run arips_keypoint_detection keypoint_annotator [--dataset DIR]
 
 Controls:
-  left mouse button     set keypoint 0 (on RGB or depth image)
+  left mouse button     set keypoint 0 (on RGB or depth image; the depth view is hidden for
+                        datasets without any depth images)
   right mouse button    set keypoint 1
   left / right arrow    previous / next image (sorted by name)
   ctrl + left / right   previous / next image that has no annotation for the tag yet
@@ -27,11 +28,12 @@ import numpy as np
 from python_qt_binding.QtCore import QPointF, QRectF, QTimer, Qt, Signal
 from python_qt_binding.QtGui import QColor, QFont, QImage, QPainter, QPen, QPixmap
 from python_qt_binding.QtWidgets import (
-    QAbstractItemView, QApplication, QDialog, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
+    QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
     QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from . import dataset_io as dio
+from .presets import list_presets
 from .learning.viz import colorize_depth
 
 KEYPOINT_COLORS = [QColor(255, 40, 40), QColor(40, 220, 40), QColor(60, 120, 255), QColor(255, 200, 0),
@@ -91,6 +93,16 @@ class SetupDialog(QDialog):
         # new annotation
         new = QGroupBox('Start new annotation')
         form = QFormLayout(new)
+        self._presets = list_presets()
+        self._preset_combo = QComboBox()
+        self._preset_combo.addItem('(custom)')
+        for p in self._presets:
+            label = f'{p.name}  [{", ".join(p.keypoints)}]' + (f'  - {p.description}' if p.description else '')
+            self._preset_combo.addItem(label)
+        self._preset_combo.setToolTip('Fill tag and keypoint names from a preset '
+                                      '(yaml files in the package config/presets folder)')
+        self._preset_combo.currentIndexChanged.connect(self._apply_preset)
+        form.addRow('Preset:', self._preset_combo)
         self._tag_edit = QLineEdit()
         self._tag_edit.setPlaceholderText('e.g. door_handle  (letters, digits, _ and -)')
         form.addRow('Tag:', self._tag_edit)
@@ -111,6 +123,16 @@ class SetupDialog(QDialog):
         layout.addWidget(new)
 
         self.resize(520, 560)
+
+    def _apply_preset(self, index: int):
+        if index <= 0:
+            return
+        preset = self._presets[index - 1]
+        self._tag_edit.setText(preset.tag)
+        self._count.setValue(len(preset.keypoints))
+        self._resize_names(len(preset.keypoints))
+        for i, name in enumerate(preset.keypoints):
+            self._names.setItem(i, 0, QTableWidgetItem(name))
 
     def _resize_names(self, count: int):
         old = self._names.rowCount()
@@ -255,6 +277,7 @@ class AnnotationWindow(QMainWindow):
         self.names = names
         self.images = dio.list_rgb_images(dataset_dir)
         self.depth_index = dio.DepthIndex(dataset_dir)
+        self.has_depth = bool(dio.list_depth_images(dataset_dir))
         self.annotated = {p for p in self.images if dio.has_annotation(p, tag)}
         self.index = -1
         self.keypoints: dict[int, tuple[float, float]] = {}
@@ -290,6 +313,7 @@ class AnnotationWindow(QMainWindow):
             views.addWidget(view, 1)
         self.rgb_view.hovered.connect(lambda x, y: self.on_hover(x, y, rgb=True))
         self.depth_view.hovered.connect(lambda x, y: self.on_hover(x, y, rgb=False))
+        self.depth_view.setVisible(self.has_depth)
         layout.addLayout(views, 1)
 
         bottom = QHBoxLayout()
@@ -305,7 +329,10 @@ class AnnotationWindow(QMainWindow):
         self._message_timer.setSingleShot(True)
         self._message_timer.timeout.connect(self.message.clear)
 
-        self.resize(1400, 620)
+        if self.has_depth:
+            self.resize(1400, 620)
+        else:
+            self.resize(800, 700)
         if self.images:
             first = next((i for i, p in enumerate(self.images) if p not in self.annotated), 0)
             self.load(first)
@@ -328,7 +355,7 @@ class AnnotationWindow(QMainWindow):
         else:
             ref = (bgr.shape[1], bgr.shape[0])
             self.rgb_view.set_image(rgb_array_to_qimage(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)), ref)
-        depth_path = self.depth_index.find(path)
+        depth_path = self.depth_index.find(path) if self.has_depth else None
         self.depth_m = None
         if depth_path is not None:
             try:

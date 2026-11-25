@@ -15,7 +15,8 @@ Without a test split there is no validation and best.pt is the final model.
 
 Output folder: best.pt / best.json (EMA weights of the best validation epoch + model metadata,
 including the used splits under "split"), last.pt, log.csv, preview_best.jpg (validation
-predictions), train_args.json.
+predictions), train_args.json, model.onnx / model.json (best.pt exported to ONNX after training,
+skip with --no-export).
 """
 
 import argparse
@@ -169,6 +170,7 @@ def make_parser():
     p.add_argument('--overfit', type=int, help='sanity check: train and validate on the first N images, no aug')
     p.add_argument('--workers', type=int, default=8)
     p.add_argument('--seed', type=int, default=0)
+    p.add_argument('--no-export', action='store_true', help='do not export best.pt to model.onnx after training')
     return p
 
 
@@ -218,6 +220,12 @@ def main(argv=None):
         n = sum(s.depth_path is None for s in all_s)
         print(f'warning: {n} images without depth image (depth input will be empty)', file=sys.stderr)
     ref_size = detect_ref_size(train_s)
+    if 'depth' in inputs:
+        no_depth = sum(s.depth_path is None for s in all_s)
+        if no_depth == len(all_s):
+            sys.exit('error: depth input requested, but no image has a depth image (rgb-only dataset?)')
+        if no_depth:
+            print(f'warning: {no_depth}/{len(all_s)} images have no depth image, they get an all-invalid depth input')
     print(f'train {len(train_s)}, val {len(val_s)} images ({split_desc}), keypoints {names}, inputs {inputs}, '
           f'ref size {ref_size}')
 
@@ -333,6 +341,13 @@ def main(argv=None):
     else:
         best = json.loads((args.out / 'best.json').read_text())
         print(f'best epoch {best["epoch"]}: {format_metrics(best["val_metrics"])}')
+    if not args.no_export:
+        try:
+            from .export_onnx import export
+            onnx_path = export(args.out / 'best.pt', args.out / 'model.onnx')
+            print(f'exported {onnx_path} (+ {onnx_path.with_suffix(".json").name})')
+        except Exception as e:  # noqa: BLE001
+            print(f'warning: ONNX export failed ({e}); run export_keypoints_onnx manually', file=sys.stderr)
     print(f'saved to {args.out}')
     return 0
 

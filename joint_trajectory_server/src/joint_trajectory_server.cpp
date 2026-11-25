@@ -417,6 +417,14 @@ private:
         cmd_pub_->publish(msg);
     }
 
+    // Called when a new trajectory or gripper command starts: the arm may have been moved
+    // without this server (teleop, other controllers), so its old last command is stale.
+    void resetLastCommand(const Vec & measured)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        last_cmd_ = measured;
+    }
+
     // Publishes current positions as target so the arm stops trying to move.
     void holdCurrent()
     {
@@ -447,15 +455,10 @@ private:
             gh->abort(result);
             return;
         }
-        // Other joints keep their last commanded value; fall back to measured positions.
+        // The arm may have been moved by other means since our last command (teleop, other
+        // controllers), so start from the measured positions: the other joints hold where they are.
+        resetLastCommand(*cur);
         Vec cmd = *cur;
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (last_cmd_.size() == joints_.size()) {
-                cmd = last_cmd_;
-            }
-        }
-        cmd[g] = (*cur)[g];
 
         const auto period = std::chrono::duration_cast<clock::duration>(std::chrono::duration<double>(1.0 / rate_));
         double ref_pos = (*cur)[g];
@@ -536,6 +539,7 @@ private:
         std::string error = "no joint states";
         std::optional<Spline> sp;
         if (current) {
+            resetLastCommand(*current);
             sp = buildSpline(*gh->get_goal(), *current, error);
         }
         if (!sp) {

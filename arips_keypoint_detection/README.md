@@ -8,9 +8,11 @@ small heatmap models (< 1M parameters) for RGB, RGB-D or depth-only input, and a
 ```bash
 # 1. extract every 10th RGB frame (+ closest depth) from all bags below a folder -> <bags>/dataset
 ros2 run arips_keypoint_detection extract_rgbd_dataset --bags BAGS_DIR --skip 10
+#    bags without the depth topic are extracted rgb-only; --no-depth extracts only rgb for all bags
 
 # 2. annotate (left click = keypoint 0, right click = keypoint 1, arrows / ctrl+arrows to navigate)
 ros2 run arips_keypoint_detection keypoint_annotator --dataset DATASET_DIR
+#    a new annotation can start from a preset (config/presets/*.yaml: tag, description, keypoints)
 
 # 3. create a random train/test split of the annotated images (or --all for one split with everything)
 ros2 run arips_keypoint_detection create_split DATASET_DIR/config_door_handle.json foobar --test_ratio 0.1
@@ -21,15 +23,17 @@ ros2 run arips_keypoint_detection create_split DATASET_DIR/config_door_handle.js
 ros2 run arips_keypoint_detection train_keypoints --tag door_handle \
     --train-split DATASET_DIR/split_door_handle_foobar_train.json \
     --test-split DATASET_DIR/split_door_handle_foobar_test.json --model mobilenet --inputs rgb depth
-#    -> keypoint_train/door_handle_foobar_mobilenet_rgbd/; the splits used are stored as "split" in best.json
+#    -> keypoint_train/door_handle_foobar_mobilenet_rgbd/ with best.pt and model.onnx (exported automatically,
+#       --no-export to skip); the splits used are stored as "split" in best.json
 #    alternative without split files: --data DATASET_DIR (validation = last bag)
+#    important parameters: see "Training parameters" below
 
 # 5. compare models / input combinations on the same test images
 ros2 run arips_keypoint_detection evaluate_keypoints keypoint_train/*/best.pt \
     --split-file DATASET_DIR/split_door_handle_foobar_test.json --preview /tmp/kp
 
-# 6. export to ONNX (+ metadata json) and run the node
-ros2 run arips_keypoint_detection export_keypoints_onnx keypoint_train/door_handle_mobilenet_rgbd/best.pt
+# 6. run the node (training already exported model.onnx; re-export manually e.g. with another threshold:
+#    ros2 run arips_keypoint_detection export_keypoints_onnx keypoint_train/.../best.pt --threshold 0.4)
 ros2 run arips_keypoint_detection keypoint_detector_node --ros-args \
     -p model:=$PWD/keypoint_train/door_handle_mobilenet_rgbd/model.onnx
 ```
@@ -64,6 +68,33 @@ Output: one heatmap per keypoint at 1/4 input resolution (default input 320x240)
 Training: strong augmentation (affine pan/rotation/zoom/shear; brightness/contrast/gamma/hue/saturation,
 noise, blur, JPEG; depth noise, holes and dropout; modality dropout for RGB-D), AdamW + cosine schedule,
 EMA weights, best checkpoint by a clipped validation pixel error.
+
+## Training parameters (`train_keypoints`)
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `--epochs` | 100 | Number of epochs. An epoch is a fixed number of augmented samples, not one pass over the data, so the training length doesn't depend on the dataset size. |
+| `--samples-per-epoch` | 1600 | Augmented samples per epoch (at least the number of training images). Total steps = epochs × samples / batch. |
+| `--batch` | 32 | Batch size. |
+| `--lr` | 2e-3 | Peak learning rate (AdamW, linear warmup then cosine decay to 1 %). |
+| `--warmup-epochs` | 3 | Linear warmup length. |
+| `--encoder-lr-scale` | 0.3 | Learning rate factor for the pretrained encoder (`mobilenet`). |
+| `--weight-decay` | 1e-4 / 5e-4 | Default for `mobilenet` / `tiny_unet`. |
+| `--ema` | 0.998 | EMA decay of the weights. The EMA weights are validated and saved. |
+| `--model` | `mobilenet` | `mobilenet` or `tiny_unet`, see above. |
+| `--inputs` | `rgb` | Any of `rgb`, `depth`. |
+| `--input-size W H` | 320 240 | Network input size. The heatmaps are 1/4 of it. |
+| `--sigma` | 2.0 | Target Gaussian σ in heatmap pixels. |
+| `--loss` | `qfl` | Heatmap loss. |
+| `--threshold` | 0.3 | Visibility threshold on the heatmap peak (stored in the metadata, the node uses it). |
+| `--hflip` | off | Horizontal flip augmentation. Only use it if the keypoints are symmetric or their order doesn't matter. |
+| `--no-augment` | off | Disable augmentation. |
+| `--no-pretrained` | off | Don't use ImageNet weights. |
+| `--val-bags` / `--val-fraction` | 1 / – | Validation split when training with `--data` instead of split files. |
+| `--overfit N` | – | Sanity check: train and validate on the first N images, without augmentation. |
+| `--out` | auto | Output folder, default `keypoint_train/<split name or tag>_<model>_<inputs>`. |
+| `--no-export` | off | Skip the automatic ONNX export of `best.pt` to `model.onnx` after training. |
+| `--workers` / `--seed` | 8 / 0 | Data loader workers, random seed. |
 
 Training needs torch, torchvision and onnx (workspace venv). The node only needs onnxruntime and falls back
 to `cv2.dnn`.

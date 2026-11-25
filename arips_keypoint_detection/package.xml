@@ -20,6 +20,8 @@
   <exec_depend>python_qt_binding</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
 
   <!-- training (learning/train.py, export_onnx.py) needs torch, torchvision and onnx from the venv;
        the detector node only needs onnxruntime (pip) or falls back to cv2.dnn -->
