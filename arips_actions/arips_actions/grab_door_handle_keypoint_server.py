@@ -85,7 +85,7 @@ class GrabDoorHandleKeypointServer(GrabDoorHandleDirectSimServer):
                 ('num_frames', 5),
                 ('keypoint_timeout_s', 5.0),
                 # Handle point (spindle axis, lever face) = handle_start + these offsets [m]
-                ('handle_offset_approach', 0.008),
+                ('handle_offset_approach', 0.000),
                 ('handle_offset_lever', 0.012),
                 ('handle_offset_z', 0.01),
                 # Added to the approach yaw from the keypoints for a right lever (negated for

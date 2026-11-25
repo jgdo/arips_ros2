@@ -4,7 +4,13 @@ arm:
   kinematics_solver_attempts: 3
   mode: global
   position_scale: 1.0
-  rotation_scale: 0.1
+  rotation_scale: 0.5
   position_threshold: 0.0005
   orientation_threshold: 0.0005
   cost_threshold: 0.001
+  
+  minimal_displacement_weight: 0.0
+  center_joints_weight: 0.001
+  avoid_joint_limits_weight: 0.001
+  stop_optimization_on_valid_solution: false
+

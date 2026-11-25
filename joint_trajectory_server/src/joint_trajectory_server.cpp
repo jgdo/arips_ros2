@@ -75,6 +75,8 @@ public:
         rate_ = declare_parameter<double>("command_rate", 50.0);
         max_start_dev_ = declare_parameter<double>("max_start_deviation", 0.1);
         goal_tol_ = declare_parameter<double>("goal_tolerance", 0.02);
+        // The gripper may be blocked short of its target (e.g. by a door handle lever under load).
+        gripper_goal_tol_ = declare_parameter<double>("gripper_goal_tolerance", goal_tol_);
         progress_timeout_ = declare_parameter<double>("progress_timeout", 2.0);
         progress_thresh_ = declare_parameter<double>("progress_threshold", 0.002);
         state_timeout_ = declare_parameter<double>("state_timeout", 1.0);
@@ -487,7 +489,7 @@ private:
             publish(cmd);
 
             const double pos = (*cur)[g];
-            const bool reached = std::abs(pos - target) <= goal_tol_;
+            const bool reached = std::abs(pos - target) <= gripper_goal_tol_;
             const bool cmd_done = std::abs(target - cmd[g]) < 1e-9;
 
             feedback->position = pos;
@@ -619,7 +621,7 @@ private:
     std::vector<std::string> joints_;
     Vec max_vel_, max_acc_;
     std::map<std::string, size_t> index_;
-    double rate_, max_start_dev_, goal_tol_, progress_timeout_, progress_thresh_, state_timeout_;
+    double rate_, max_start_dev_, goal_tol_, gripper_goal_tol_, progress_timeout_, progress_thresh_, state_timeout_;
 
     std::mutex mutex_;
     std::map<std::string, double> current_;

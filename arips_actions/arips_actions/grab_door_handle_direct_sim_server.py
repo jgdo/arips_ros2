@@ -36,6 +36,7 @@ from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.time import Time
+from sensor_msgs.msg import JointState
 from tf2_ros import Buffer, TransformException, TransformListener
 
 # ---- Door in the Gazebo lu world (arips_gazebo/worlds/lu.sdf), closed -----------------------
@@ -146,6 +147,12 @@ class GrabDoorHandleDirectSimServer(Node):
                 ('execute_trajectory_action', '/execute_trajectory'),
                 ('ik_timeout_s', 1.0),
                 ('ik_avoid_collisions', False),
+                # IK is seeded with the current joint positions from this topic, and only
+                # solutions on the current elbow branch (sign of elbow_joint) are accepted;
+                # pick_ik's global search otherwise may return the mirrored SCARA elbow.
+                ('joint_states_topic', '/joint_states'),
+                ('elbow_joint', 'joint_3'),
+                ('ik_attempts', 5),
                 ('planning_time_s', 5.0),
                 ('planning_attempts', 5),
                 ('max_velocity_scaling', 0.5),
@@ -175,6 +182,8 @@ class GrabDoorHandleDirectSimServer(Node):
         self._gripper_joint = p('gripper_joint')
         self._ik_timeout = p('ik_timeout_s')
         self._ik_avoid_collisions = p('ik_avoid_collisions')
+        self._elbow_joint = p('elbow_joint')
+        self._ik_attempts = max(1, p('ik_attempts'))
         self._planning_time = p('planning_time_s')
         self._planning_attempts = p('planning_attempts')
         self._velocity_scaling = p('max_velocity_scaling')
@@ -193,6 +202,10 @@ class GrabDoorHandleDirectSimServer(Node):
         self._active_goal_id = None
 
         callback_group = ReentrantCallbackGroup()
+        self._joint_lock = threading.Lock()
+        self._joint_positions = {}
+        self.create_subscription(JointState, p('joint_states_topic'), self._on_joint_states,
+                                 50, callback_group=callback_group)
         self._ik_client = self.create_client(
             GetPositionIK, p('compute_ik_service'), callback_group=callback_group)
         self._move_client = ActionClient(
@@ -232,6 +245,11 @@ class GrabDoorHandleDirectSimServer(Node):
     def _cancel_callback(self, _goal_handle):
         return CancelResponse.ACCEPT
 
+    def _on_joint_states(self, msg):
+        with self._joint_lock:
+            for name, position in zip(msg.name, msg.position):
+                self._joint_positions[name] = position
+
     # ---- execution -------------------------------------------------------------------------
 
     def execute_callback(self, goal_handle):
@@ -251,28 +269,47 @@ class GrabDoorHandleDirectSimServer(Node):
 
         if not self._ik_client.wait_for_service(timeout_sec=self._server_wait_timeout):
             return self._abort(goal_handle, 'compute_ik service not available')
+        with self._joint_lock:
+            current = dict(self._joint_positions)
+        if self._elbow_joint not in current:
+            return self._abort(goal_handle, f'No joint state for {self._elbow_joint} yet')
+        elbow_sign = math.copysign(1.0, current[self._elbow_joint])
         ik_request = GetPositionIK.Request()
         ik_request.ik_request.group_name = self._group
         ik_request.ik_request.ik_link_name = self._ik_link
         ik_request.ik_request.pose_stamped = target
         ik_request.ik_request.avoid_collisions = self._ik_avoid_collisions
         ik_request.ik_request.timeout = Duration(seconds=self._ik_timeout).to_msg()
+        # Seed with the actual current joint positions (the planning scene state may lag).
         ik_request.ik_request.robot_state.is_diff = True
-        ik_future = self._ik_client.call_async(ik_request)
-        if not self._wait_for(ik_future, goal_handle, goal_id,
-                              self._ik_timeout + self._server_wait_timeout):
-            return self._stopped_or_abort(goal_handle, goal_id, 'Timed out waiting for IK')
-        ik_response = ik_future.result()
-        if ik_response.error_code.val != MoveItErrorCodes.SUCCESS:
-            p = target.pose.position
-            return self._abort(
-                goal_handle,
-                f'Pre-grab pose not reachable by IK (error code {ik_response.error_code.val}), '
-                f'{self._ik_link} target in {self._planning_frame}: '
-                f'({p.x:.3f}, {p.y:.3f}, {p.z:.3f})')
-
-        solution = dict(zip(ik_response.solution.joint_state.name,
-                            ik_response.solution.joint_state.position))
+        ik_request.ik_request.robot_state.joint_state.name = list(current.keys())
+        ik_request.ik_request.robot_state.joint_state.position = list(current.values())
+        solution = None
+        error = None
+        for _ in range(self._ik_attempts):
+            ik_future = self._ik_client.call_async(ik_request)
+            if not self._wait_for(ik_future, goal_handle, goal_id,
+                                  self._ik_timeout + self._server_wait_timeout):
+                return self._stopped_or_abort(goal_handle, goal_id, 'Timed out waiting for IK')
+            ik_response = ik_future.result()
+            if ik_response.error_code.val != MoveItErrorCodes.SUCCESS:
+                p = target.pose.position
+                error = (f'Pre-grab pose not reachable by IK (error code '
+                         f'{ik_response.error_code.val}), {self._ik_link} target in '
+                         f'{self._planning_frame}: ({p.x:.3f}, {p.y:.3f}, {p.z:.3f})')
+                continue
+            candidate = dict(zip(ik_response.solution.joint_state.name,
+                                 ik_response.solution.joint_state.position))
+            elbow = candidate.get(self._elbow_joint)
+            if elbow is not None and math.copysign(1.0, elbow) != elbow_sign:
+                error = (f'IK only found the mirrored elbow configuration ({self._elbow_joint} '
+                         f'{elbow:.3f}, current {current[self._elbow_joint]:.3f})')
+                self.get_logger().warn(error + ', retrying')
+                continue
+            solution = candidate
+            break
+        if solution is None:
+            return self._abort(goal_handle, error)
         self.get_logger().info(
             'Pre-grab IK solution: '
             + ', '.join(f'{name}={value:.3f}' for name, value in solution.items()))
