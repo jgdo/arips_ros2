@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'semantic_map_server = arips_semantic_map.semantic_map_server:main',
+            'door_laser_filter = arips_semantic_map.door_laser_filter:main',
         ],
     },
 )

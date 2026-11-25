@@ -8,6 +8,16 @@ import numpy as np
 from . import preprocess as pp
 
 
+_GPU_PROVIDERS = ('CUDAExecutionProvider', 'TensorrtExecutionProvider', 'ROCMExecutionProvider',
+                  'MIGraphXExecutionProvider', 'OpenVINOExecutionProvider', 'DmlExecutionProvider')
+
+
+def _ort_device(providers) -> str:
+    """'GPU (<provider>)' if the session's first provider is a GPU one, else 'CPU'."""
+    first = providers[0] if providers else 'CPUExecutionProvider'
+    return f'GPU ({first})' if first in _GPU_PROVIDERS else 'CPU'
+
+
 class KeypointDetector:
 
     def __init__(self, onnx_path, backend: str = 'auto'):
@@ -21,14 +31,36 @@ class KeypointDetector:
         if backend in ('auto', 'onnxruntime'):
             try:
                 import onnxruntime as ort
-                self._session = ort.InferenceSession(str(self.path), providers=['CPUExecutionProvider'])
+                # GPU first; onnxruntime silently drops providers it cannot load, so the session's
+                # actual providers (-> self.device) tell where it really runs
+                available = ort.get_available_providers()
+                if 'CUDAExecutionProvider' in available and hasattr(ort, 'preload_dlls'):
+                    # load CUDA/cuDNN from the pip nvidia-* packages (onnxruntime-gpu[cuda,cudnn])
+                    # if installed; otherwise the system libraries are used
+                    try:
+                        ort.preload_dlls()
+                    except Exception:
+                        pass
+                providers = [p for p in ('CUDAExecutionProvider',) if p in available]
+                providers.append('CPUExecutionProvider')
+                self._session = ort.InferenceSession(str(self.path), providers=providers)
                 self.backend = 'onnxruntime'
+                self.device = _ort_device(self._session.get_providers())
             except ImportError:
                 if backend == 'onnxruntime':
                     raise
         if self.backend is None:
             self._net = cv2.dnn.readNetFromONNX(str(self.path))
             self.backend = 'cv2.dnn'
+            self.device = 'CPU'
+            if hasattr(cv2, 'cuda') and cv2.cuda.getCudaEnabledDeviceCount() > 0:
+                self._net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+                self._net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+                self.device = 'GPU (cv2.dnn CUDA)'
+
+    @property
+    def on_gpu(self) -> bool:
+        return self.device.startswith('GPU')
 
     def heatmaps(self, tensors: dict) -> np.ndarray:
         """{input name: 1xCxHxW} -> K x Hh x Wh probabilities."""

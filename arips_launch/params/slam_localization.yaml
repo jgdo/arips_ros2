@@ -13,7 +13,7 @@ slam_toolbox:
     odom_frame: odom
     map_frame: map
     base_frame: arips_wheel_center
-    scan_topic: /scan
+    scan_topic: /scan_filtered_semantic
     mode: localization
 
     # map to load for localization

@@ -105,7 +105,7 @@ class GetDoorGraspingApproachPoseNode(Node):
                 # footprint (0.43 m wide) touched the door frame cells and the pose was unreachable.
                 ('door_dist', 0.25),
                 # Distance from the pivot along the door line (towards the extent point).
-                ('pivot_dist', 0.9),
+                ('pivot_dist', 0.93),
                 # Same for the push side (the door opens away from the robot). There the robot
                 # faces the door straight on and stands closer to the pivot, since the arm reaches
                 # the handle on its right side (0.57 from the lu semantic pivot = 0.54 m from the

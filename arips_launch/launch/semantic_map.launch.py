@@ -34,5 +34,11 @@ def generate_launch_description():
             output='screen',
             parameters=[{'map_file': semantic_map_file}],
         ),
+        Node(
+            package='arips_semantic_map',
+            executable='door_laser_filter',
+            name='door_laser_filter',
+            output='screen',
+        ),
         route_graph_launch,
     ])

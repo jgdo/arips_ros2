@@ -220,6 +220,11 @@ class KeypointDetectorNode(Node):
             f'threshold {self.threshold}), listening on {topics}, 3D from '
             + ('depth' if self.height_mode == 'depth'
                else f'fixed height {self.fixed_height:.3f} m in {self.fixed_height_frame}'))
+        if self.detector.on_gpu:
+            self.get_logger().info(f'keypoint detection running on {self.detector.device}')
+        else:
+            self.get_logger().warning('keypoint detection running on CPU, no GPU available '
+                                      '(onnxruntime without CUDAExecutionProvider?)')
 
     def on_camera_info(self, msg):
         if self.camera_info is None:

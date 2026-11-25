@@ -59,12 +59,12 @@ class DriveAroundPivotServer(Node):
                 ('map_frame', 'map'),
                 ('base_frame', 'arips_wheel_center'),
                 # 70 deg ran the robot's rear into the wall at the end of the arc in the lu world.
-                ('default_angle_deg', 66.0),
+                ('default_angle_deg', 58.0),
                 # Moderate: the robot pulls/pushes the door leaf on this arc.
-                ('linear_speed', 0.2),
+                ('linear_speed', 0.1),
                 # Near the end of the arc the speed ramps down (ramp_gain * remaining arc
                 # length) to min_linear_speed, so the arc angle is not overshot.
-                ('min_linear_speed', 0.04),
+                ('min_linear_speed', 0.03),
                 ('ramp_gain', 1.5),
                 ('bearing_p_factor', 2.0),
                 ('distance_p_factor', 3.0),
@@ -81,18 +81,13 @@ class DriveAroundPivotServer(Node):
         p = self.get_parameter
         self._map_frame = p('map_frame').value
         self._base_frame = p('base_frame').value
-        self._default_angle = math.radians(p('default_angle_deg').value)
-        self._linear_speed = abs(p('linear_speed').value)
-        self._min_linear_speed = abs(p('min_linear_speed').value)
         self._ramp_gain = p('ramp_gain').value
         self._bearing_p = p('bearing_p_factor').value
         self._distance_p = p('distance_p_factor').value
         self._max_distance_correction = math.radians(
             p('max_distance_correction_deg').value)
-        self._max_angular_speed = p('max_angular_speed').value
         self._align_threshold = math.radians(
             p('initial_align_threshold_deg').value)
-        self._min_align_angular_speed = p('min_align_angular_speed').value
         self._min_pivot_distance = p('min_pivot_distance').value
         self._timeout_factor = p('timeout_factor').value
         control_rate_hz = p('control_rate_hz').value
@@ -100,8 +95,6 @@ class DriveAroundPivotServer(Node):
 
         if control_rate_hz <= 0.0:
             raise ValueError('control_rate_hz must be greater than zero')
-        if self._linear_speed <= 0.0:
-            raise ValueError('linear_speed must be non-zero')
         self._control_period = 1.0 / control_rate_hz
 
         command_type = TwistStamped if self._use_twist_stamped else Twist
@@ -117,6 +110,29 @@ class DriveAroundPivotServer(Node):
             callback_group=ReentrantCallbackGroup(),
         )
         self.get_logger().info('drive_around_pivot action server ready')
+
+    # ------------------------------------------------- dynamic parameters
+    # Read on every use so they can be changed at runtime (ros2 param set).
+
+    @property
+    def _default_angle(self):
+        return math.radians(self.get_parameter('default_angle_deg').value)
+
+    @property
+    def _linear_speed(self):
+        return abs(self.get_parameter('linear_speed').value)
+
+    @property
+    def _min_linear_speed(self):
+        return abs(self.get_parameter('min_linear_speed').value)
+
+    @property
+    def _max_angular_speed(self):
+        return abs(self.get_parameter('max_angular_speed').value)
+
+    @property
+    def _min_align_angular_speed(self):
+        return abs(self.get_parameter('min_align_angular_speed').value)
 
     # ------------------------------------------------------------------ main
 
@@ -146,7 +162,12 @@ class DriveAroundPivotServer(Node):
         # -1: pivot on the right -> +y points away from the pivot.
         side = 1.0 if py >= 0.0 else -1.0
         desired_bearing = side * math.pi / 2.0
-        velocity = -self._linear_speed  # backwards
+        # Cruise speed is fixed for the goal (feed-forward, deadline and ramp
+        # all derive from it); the other speed limits are re-read every cycle.
+        linear_speed = self._linear_speed
+        if linear_speed <= 0.0:
+            return self._abort(goal_handle, result, 'linear_speed must be non-zero')
+        velocity = -linear_speed  # backwards
         self.get_logger().info(
             f'DriveAroundPivot: pivot ({pivot_x:.3f}, {pivot_y:.3f}) in '
             f'{self._map_frame}, distance {start_distance:.3f} m, pivot on the '
@@ -183,7 +204,7 @@ class DriveAroundPivotServer(Node):
         max_distance_error = 0.0
         max_bearing_error = 0.0
         feed_forward = side * velocity / start_distance
-        expected_duration = target_angle * start_distance / self._linear_speed
+        expected_duration = target_angle * start_distance / linear_speed
         deadline = time.monotonic() + self._timeout_factor * expected_duration + 5.0
 
         while True:
@@ -245,7 +266,7 @@ class DriveAroundPivotServer(Node):
             # Slow down towards the end of the arc (velocity is negative: backwards).
             remaining = (target_angle - abs(travelled)) * start_distance
             speed = max(self._min_linear_speed,
-                        min(self._linear_speed, self._ramp_gain * remaining))
+                        min(linear_speed, self._ramp_gain * remaining))
             ramped_velocity = math.copysign(speed, velocity)
             omega = (feed_forward * ramped_velocity / velocity
                      + self._bearing_p * heading_error)

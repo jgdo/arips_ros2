@@ -26,13 +26,16 @@ class CrossDoorStepServer(Node):
                 ('alignment_p_factor', 3.0),
                 ('door_clearing_distance', 0.4),
                 ('control_rate_hz', 20.0),
-                ('forward_speed', 0.25),
+                ('forward_speed', 0.08),
                 # Near the end the speed ramps down (ramp_gain * remaining distance) to
                 # min_forward_speed. The next segment continues from here, so no full stop
                 # precision is needed, just no hard braking from full speed.
-                ('min_forward_speed', 0.06),
+                ('min_forward_speed', 0.02),
                 ('ramp_gain', 1.5),
                 ('enable_stamped_cmd_vel', True),
+                # Abort the goal with FAILURE if it is not finished within this time
+                # (seconds, node clock). <= 0 disables the timeout.
+                ('action_timeout', 20.0),
             ],
         )
         self._map_frame = self.get_parameter('map_frame').value
@@ -50,6 +53,7 @@ class CrossDoorStepServer(Node):
         self._initial_align_velocity = self.get_parameter('initial_align_veclocity').value
         self._use_twist_stamped = self.get_parameter(
             'enable_stamped_cmd_vel').value
+        self._action_timeout = float(self.get_parameter('action_timeout').value)
 
         if control_rate_hz <= 0.0:
             raise ValueError('control_rate_hz must be greater than zero')
@@ -77,6 +81,7 @@ class CrossDoorStepServer(Node):
 
         result = CrossDoorStep.Result()
         self._publish_stop()
+        start_time = self.get_clock().now()
 
         try:
             start_x, start_y, _ = self._current_pose()
@@ -120,6 +125,10 @@ class CrossDoorStepServer(Node):
         while True:
             if goal_handle.is_cancel_requested:
                 return self._cancel(goal_handle, result)
+            if self._timed_out(start_time):
+                return self._abort(
+                    goal_handle, result,
+                    f'CrossDoorStep timed out after {self._action_timeout:.1f} s')
             try:
                 current_x, current_y, current_yaw = self._current_pose()
             except TransformException as error:
@@ -144,6 +153,10 @@ class CrossDoorStepServer(Node):
         while True:
             if goal_handle.is_cancel_requested:
                 return self._cancel(goal_handle, result)
+            if self._timed_out(start_time):
+                return self._abort(
+                    goal_handle, result,
+                    f'CrossDoorStep timed out after {self._action_timeout:.1f} s')
             try:
                 current_x, current_y, current_yaw = self._current_pose()
             except TransformException as error:
@@ -172,6 +185,12 @@ class CrossDoorStepServer(Node):
                 alignment_error * self._alignment_p_factor)
             self._publish_command(command)
             time.sleep(self._control_period)
+
+    def _timed_out(self, start_time):
+        if self._action_timeout <= 0.0:
+            return False
+        elapsed = (self.get_clock().now() - start_time).nanoseconds * 1e-9
+        return elapsed > self._action_timeout
 
     def _current_pose(self):
         transform = self._tf_buffer.lookup_transform(

@@ -49,7 +49,10 @@
   <depend>arips_semantic_map_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>interactive_markers</depend>
+  <depend>rcl_interfaces</depend>
   <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
