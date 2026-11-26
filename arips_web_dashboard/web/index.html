@@ -32,6 +32,9 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 #header-right {
   flex: 1 1 0;
 }
+#header-left {
+  gap: 8px;
+}
 #header-center {
   flex: 0 0 auto;
   justify-content: center;
@@ -42,6 +45,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
   font-size: 13px;
 }
 #battery-status,
+#base-battery-status,
 #connection-status {
   font-size: 13px;
   font-weight: 600;
@@ -168,7 +172,8 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 
 <header id="header">
   <div id="header-left">
-    <div id="battery-status" class="battery-unknown">Battery: unknown</div>
+    <div id="battery-status" class="battery-unknown">Laptop battery: unknown</div>
+    <div id="base-battery-status" class="battery-unknown">Base battery: unknown</div>
   </div>
   <div id="header-center">
     <div id="connection-status" class="disconnected">rosbridge: Disconnected</div>
@@ -228,11 +233,13 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
 
   var connEl = document.getElementById('connection-status');
   var batteryEl = document.getElementById('battery-status');
+  var baseBatteryEl = document.getElementById('base-battery-status');
   ros.on('connection', function() {
     connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Connected';
     connEl.className = 'connected';
     setBatteryUnknown();
+    setBaseBatteryUnknown();
     fetchComponents();
   });
   ros.on('error', function() {
@@ -240,12 +247,14 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     connEl.textContent = 'rosbridge: Error';
     connEl.className = 'disconnected';
     setBatteryUnknown();
+    setBaseBatteryUnknown();
   });
   ros.on('close', function() {
     connectionAttemptInProgress = false;
     connEl.textContent = 'rosbridge: Disconnected';
     connEl.className = 'disconnected';
     setBatteryUnknown();
+    setBaseBatteryUnknown();
   });
   setInterval(function() {
     if (ros.isConnected || connectionAttemptInProgress) {
@@ -274,8 +283,22 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     updateBatteryStatus(msg);
   });
 
+  var baseBatterySub = new ROSLIB.Topic({
+    ros: ros,
+    name: '/base_battery_state',
+    messageType: 'sensor_msgs/msg/BatteryState'
+  });
+
+  baseBatterySub.subscribe(function(msg) {
+    if (!ros.isConnected) {
+      setBaseBatteryUnknown();
+      return;
+    }
+    updateBaseBatteryStatus(msg);
+  });
+
   function setBatteryUnknown() {
-    batteryEl.textContent = 'Battery: unknown';
+    batteryEl.textContent = 'Laptop battery: unknown';
     batteryEl.className = 'battery-unknown';
   }
 
@@ -291,7 +314,7 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
       ? Math.round(msg.percentage * 100)
       : null;
     var status = statusNames[msg.power_supply_status] || 'unknown';
-    var text = 'Battery: ' + (percentage === null ? 'unknown' : percentage + '%');
+    var text = 'Laptop battery: ' + (percentage === null ? 'unknown' : percentage + '%');
     if (status !== 'unknown') {
       text += ' (' + status + ')';
     }
@@ -299,6 +322,28 @@ body { font-family: sans-serif; display: flex; flex-direction: column; height: 1
     batteryEl.className = percentage === null
       ? 'battery-unknown'
       : percentage <= 15 ? 'disconnected' : 'connected';
+  }
+
+  function setBaseBatteryUnknown() {
+    baseBatteryEl.textContent = 'Base battery: unknown';
+    baseBatteryEl.className = 'battery-unknown';
+  }
+
+  function updateBaseBatteryStatus(msg) {
+    if (msg.present === false) {
+      baseBatteryEl.textContent = 'Base battery: unavailable';
+      baseBatteryEl.className = 'battery-unknown';
+      return;
+    }
+    var voltage = typeof msg.voltage === 'number' && isFinite(msg.voltage)
+      ? msg.voltage
+      : null;
+    if (voltage === null) {
+      setBaseBatteryUnknown();
+      return;
+    }
+    baseBatteryEl.textContent = 'Base battery: ' + voltage.toFixed(2) + ' V';
+    baseBatteryEl.className = voltage < 12.5 ? 'disconnected' : 'connected';
   }
 
   // ── Component list ───────────────────────────────────────────

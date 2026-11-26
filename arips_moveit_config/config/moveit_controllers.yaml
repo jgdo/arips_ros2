@@ -25,3 +25,7 @@ moveit_simple_controller_manager:
 
 trajectory_execution:
   allowed_start_tolerance: 0.03
+  # MoveIt defaults are 1.1 and 0.5s. Extra room so a slightly slow execution
+  # is not aborted as TIMED_OUT.
+  allowed_execution_duration_scaling: 1.15
+  allowed_goal_duration_margin: 1.0
