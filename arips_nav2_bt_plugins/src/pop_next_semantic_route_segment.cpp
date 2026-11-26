@@ -22,7 +22,12 @@ public:
         "semantic_route", "Semantic route being traversed"),
       BT::OutputPort<geometry_msgs::msg::PoseStamped>("next_goal", "End pose of the next segment"),
       BT::OutputPort<std::string>("segment_type", "Type of the next segment"),
-      BT::OutputPort<std::string>("metadata_json", "Metadata for the next segment")
+      BT::OutputPort<std::string>("metadata_json", "Metadata for the next segment"),
+      BT::OutputPort<std::string>(
+        "following_segment_type",
+        "Type of the segment after the next one (empty if there is none)"),
+      BT::OutputPort<std::string>(
+        "following_metadata_json", "Metadata of the segment after the next one")
     };
   }
 
@@ -51,6 +56,13 @@ BT::NodeStatus PopNextSemanticRouteSegment::tick()
   setOutput("next_goal", segment.end_pose);
   setOutput("segment_type", segment.segment_type);
   setOutput("metadata_json", segment.metadata_json);
+  if (semantic_route.segments.empty()) {
+    setOutput("following_segment_type", std::string());
+    setOutput("following_metadata_json", std::string());
+  } else {
+    setOutput("following_segment_type", semantic_route.segments.front().segment_type);
+    setOutput("following_metadata_json", semantic_route.segments.front().metadata_json);
+  }
 
   std::cout << "PopNextSemanticRouteSegment: next_goal position=("
             << segment.end_pose.pose.position.x << ", "

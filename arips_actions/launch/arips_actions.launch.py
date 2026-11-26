@@ -81,7 +81,8 @@ def generate_launch_description():
         server('door_state_detector'),
         server('get_door_grasping_approach_pose'),
         server('grab_door_handle_server', when(no_policy_real)),
-        server('grab_door_handle_direct_sim_server', when(no_policy_sim)),
+        # The handle position of the Gazebo lu door is known in the map frame.
+        server('grab_door_handle_direct_sim_server', when(no_policy_sim), [{'map_frame': 'map'}]),
         server('grab_door_handle_keypoint_server', when(keypoints)),
         Node(
             package='arips_keypoint_detection',

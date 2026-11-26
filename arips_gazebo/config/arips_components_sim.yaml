@@ -57,3 +57,5 @@ components:
     arguments:
       use_sim_time: 'true'
       sim: 'true'
+      # Direct (scripted MoveIt) GrabDoorHandle server instead of the keypoint based one.
+      grab_keypoints: 'false'

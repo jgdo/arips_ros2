@@ -9,13 +9,21 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import LoadComposableNodes, Node
 from launch_ros.descriptions import ComposableNode, ParameterFile, ParameterValue
 from launch_ros.substitutions import FindPackageShare
+from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
     package_share = get_package_share_directory('arips_launch')
 
-    params_file = LaunchConfiguration('params_file')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    # The per-node use_sim_time entries of the params file take precedence over the global
+    # use_sim_time of navigation_launch.py, so rewrite them. Otherwise nav2 runs on wall time
+    # in the simulation and e.g. the velocity smoother drops the sim time stamped commands
+    # of the arips_actions servers as stale.
+    params_file = RewrittenYaml(
+        source_file=LaunchConfiguration('params_file'),
+        param_rewrites={'use_sim_time': use_sim_time},
+        convert_types=True)
     autostart = LaunchConfiguration('autostart')
     use_respawn = LaunchConfiguration('use_respawn')
     use_composition = LaunchConfiguration('use_composition')

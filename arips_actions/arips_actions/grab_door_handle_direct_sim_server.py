@@ -151,6 +151,10 @@ class GrabDoorHandleDirectSimServer(Node):
                 # solutions on the current elbow branch (sign of elbow_joint) are accepted;
                 # pick_ik's global search otherwise may return the mirrored SCARA elbow.
                 ('joint_states_topic', '/joint_states'),
+                # Joints used for the IK seed. move_group rejects requests with joints that are
+                # not in its model (the Gazebo drive wheel joints), without ever responding.
+                ('ik_seed_joints', ['joint_slider', 'joint_2', 'joint_3', 'joint_4',
+                                    'joint_door_gripper']),
                 ('elbow_joint', 'joint_3'),
                 ('ik_attempts', 5),
                 ('planning_time_s', 5.0),
@@ -183,6 +187,7 @@ class GrabDoorHandleDirectSimServer(Node):
         self._ik_timeout = p('ik_timeout_s')
         self._ik_avoid_collisions = p('ik_avoid_collisions')
         self._elbow_joint = p('elbow_joint')
+        self._ik_seed_joints = set(p('ik_seed_joints'))
         self._ik_attempts = max(1, p('ik_attempts'))
         self._planning_time = p('planning_time_s')
         self._planning_attempts = p('planning_attempts')
@@ -270,7 +275,8 @@ class GrabDoorHandleDirectSimServer(Node):
         if not self._ik_client.wait_for_service(timeout_sec=self._server_wait_timeout):
             return self._abort(goal_handle, 'compute_ik service not available')
         with self._joint_lock:
-            current = dict(self._joint_positions)
+            current = {name: position for name, position in self._joint_positions.items()
+                       if name in self._ik_seed_joints}
         if self._elbow_joint not in current:
             return self._abort(goal_handle, f'No joint state for {self._elbow_joint} yet')
         elbow_sign = math.copysign(1.0, current[self._elbow_joint])

@@ -2,6 +2,8 @@
   <!--
     Default navigate_to_pose behavior tree (nav2.yaml). Follows the semantic route segment by
     segment: room segments with ComputePathToPose/FollowPath, door segments with CrossDoorStep.
+    A room segment followed by a door segment ends early (0.9 m before its end) if the door is
+    seen closed there.
     A closed door is opened first (laser based GetDoorState; an open door is crossed directly):
     - pull side: grab the handle, pull the door open around the pivot, retreat, re-approach,
       push it fully open, then cross it.
@@ -36,12 +38,42 @@
              next_goal="{next_goal}"
              segment_type="{segment_type}"
              metadata_json="{metadata_json}"
+             following_segment_type="{following_segment_type}"
+             following_metadata_json="{following_metadata_json}"
             />
             <Fallback>
               <Sequence name="FollowSegment">
                 <Sequence name="DriveInRoom" _skipIf="segment_type != 'room'">
                   <ComputePathToPose goal="{next_goal}" path="{path}" planner_id="{selected_planner}" server_timeout="3000" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
-                  <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="general_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+                  <Script code="door_ahead_checked := false" />
+                  <!-- Ends when FollowPath ends, or early when the next segment is a door that is
+                       seen closed shortly before the segment end: the door segment then drives to
+                       the grasping approach pose directly instead of first to the segment end. -->
+                  <Parallel success_count="1" failure_count="1">
+                    <FollowPath path="{path}" controller_id="{selected_controller}" goal_checker_id="general_goal_checker" server_timeout="3000" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+                    <!-- RUNNING while the Fallback succeeds; SUCCESS (inverted FAILURE) once the
+                         door ahead is seen closed. The door state is requested only once. -->
+                    <Inverter>
+                      <KeepRunningUntilFailure>
+                        <Fallback name="KeepDrivingUnlessClosedDoorAhead">
+                          <ScriptCondition code="following_segment_type != 'door' || door_ahead_checked" />
+                          <Inverter>
+                            <IsGoalNearby path="{path}" proximity_threshold="0.9"/>
+                          </Inverter>
+                          <Sequence>
+                            <Script code="door_ahead_checked := true" />
+                            <!-- An unknown state (door not observed well enough) keeps driving. -->
+                            <Fallback>
+                              <Inverter>
+                                <GetDoorState name="CheckDoorAhead" metadata_json="{following_metadata_json}" door_open="{door_ahead_open}" door_angle_deg="{door_angle_deg}" server_timeout="3000" error_msg="{door_state_error_msg}"/>
+                              </Inverter>
+                              <ScriptCondition code="door_ahead_open" />
+                            </Fallback>
+                          </Sequence>
+                        </Fallback>
+                      </KeepRunningUntilFailure>
+                    </Inverter>
+                  </Parallel>
                 </Sequence>
                 <Sequence name="OpenAndCrossDoor" _skipIf="segment_type != 'door'">
                   <!-- Remember where the door segment starts (in front of the door, on the door
