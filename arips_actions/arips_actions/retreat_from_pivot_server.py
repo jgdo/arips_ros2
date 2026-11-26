@@ -5,10 +5,11 @@ Sequence:
 1. Move the MoveIt group ``door_gripper_group`` to the named state
    ``door_gripper_neutral``.
 2. Move the MoveIt group ``arm`` to the named state ``door_grasp_folded``.
-3. Slowly turn in place until the robot's x axis points away from the pivot.
-   The robot turns away from the pivot: pivot on the left -> clockwise,
-   pivot on the right -> counter-clockwise.
-4. Slowly drive straight forward (default 0.5 m), holding the heading.
+3. Slowly drive straight backward (default 0.05 m), holding the heading.
+4. Slowly turn in place by ``rotate_away_angle_deg`` (default 80) away from the
+   pivot. Pivot on the left -> clockwise, pivot on the right ->
+   counter-clockwise.
+5. Slowly drive straight forward (default 0.5 m), holding the heading.
 
 Named states are resolved from the SRDF published by move_group on
 /robot_description_semantic and sent as joint goals to the MoveGroup action.
@@ -96,6 +97,7 @@ class RetreatFromPivotServer(Node):
                 ('move_timeout_s', 60.0),
                 ('server_wait_timeout_s', 10.0),
                 ('default_forward_distance', 0.5),
+                ('backup_distance', 0.05),
                 ('linear_speed', 0.25),
                 # Near the end the speed ramps down (ramp_gain * remaining distance) to
                 # min_linear_speed, so the faster speed does not overshoot the distance.
@@ -106,10 +108,16 @@ class RetreatFromPivotServer(Node):
                 ('angular_p_factor', 2.0),
                 ('heading_p_factor', 2.0),
                 ('rotate_threshold_deg', 1.5),
+                # How far to yaw away from the pivot before driving forward.
+                # 90 would leave the pivot straight behind a side-on start pose.
+                ('rotate_away_angle_deg', 80.0),
                 ('min_pivot_distance', 0.05),
                 ('timeout_factor', 3.0),
                 ('control_rate_hz', 20.0),
                 ('enable_stamped_cmd_vel', True),
+                # Input of the Nav2 velocity smoother (shared with controller_server and
+                # behavior_server), so commands do not compete with its output on /cmd_vel.
+                ('cmd_vel_topic', '/cmd_vel_nav'),
             ],
         )
         p = lambda name: self.get_parameter(name).value  # noqa: E731
@@ -127,6 +135,7 @@ class RetreatFromPivotServer(Node):
         self._move_timeout = p('move_timeout_s')
         self._server_wait_timeout = p('server_wait_timeout_s')
         self._default_forward_distance = p('default_forward_distance')
+        self._backup_distance = abs(p('backup_distance'))
         self._linear_speed = abs(p('linear_speed'))
         self._max_angular_speed = abs(p('max_angular_speed'))
         self._min_angular_speed = abs(p('min_angular_speed'))
@@ -135,6 +144,7 @@ class RetreatFromPivotServer(Node):
         self._angular_p = p('angular_p_factor')
         self._heading_p = p('heading_p_factor')
         self._rotate_threshold = math.radians(p('rotate_threshold_deg'))
+        self._rotate_away_angle = math.radians(abs(p('rotate_away_angle_deg')))
         self._min_pivot_distance = p('min_pivot_distance')
         self._timeout_factor = p('timeout_factor')
         control_rate_hz = p('control_rate_hz')
@@ -142,6 +152,8 @@ class RetreatFromPivotServer(Node):
 
         if control_rate_hz <= 0.0:
             raise ValueError('control_rate_hz must be greater than zero')
+        if self._rotate_away_angle > math.pi:
+            raise ValueError('rotate_away_angle_deg must be between 0 and 180')
         if self._linear_speed <= 0.0 or self._max_angular_speed <= 0.0:
             raise ValueError('linear_speed and max_angular_speed must be non-zero')
         self._control_period = 1.0 / control_rate_hz
@@ -153,7 +165,7 @@ class RetreatFromPivotServer(Node):
 
         callback_group = ReentrantCallbackGroup()
         command_type = TwistStamped if self._use_twist_stamped else Twist
-        self._cmd_vel_publisher = self.create_publisher(command_type, '/cmd_vel', 10)
+        self._cmd_vel_publisher = self.create_publisher(command_type, p('cmd_vel_topic'), 10)
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
         self.create_subscription(
@@ -244,12 +256,19 @@ class RetreatFromPivotServer(Node):
         self._move_to_named_state(
             goal_handle, 'arm_folded', self._arm_group, self._arm_state)
 
-        # 3: turn in place, away from the pivot.
+        # 3: back up before turning.
+        if self._backup_distance > 0.0:
+            backed = self._drive_straight(
+                goal_handle, -self._backup_distance, 'backup')
+            self.get_logger().info(f'Backed up {backed:.3f} m')
+
+        # 4: turn in place, away from the pivot.
         result.rotated_angle_deg = math.degrees(
             self._rotate_away(goal_handle, pivot_x, pivot_y))
 
-        # 4: drive straight forward.
-        result.driven_distance = self._drive_forward(goal_handle, forward_distance)
+        # 5: drive straight forward.
+        result.driven_distance = self._drive_straight(
+            goal_handle, forward_distance, 'drive')
         _, _, distance, _ = self._tf(lambda: self._pivot_in_base(pivot_x, pivot_y))
         result.final_pivot_distance = distance
         self.get_logger().info(
@@ -327,7 +346,7 @@ class RetreatFromPivotServer(Node):
     # ------------------------------------------------------------ base motion
 
     def _rotate_away(self, goal_handle, pivot_x, pivot_y):
-        """Turn in place until the pivot is straight behind the robot.
+        """Turn in place by rotate_away_angle, away from the pivot.
 
         Returns the signed rotated angle [rad] (+ = counter-clockwise).
         """
@@ -336,16 +355,18 @@ class RetreatFromPivotServer(Node):
         if distance < self._min_pivot_distance:
             raise _Failure(f'Pivot too close to robot ({distance:.3f} m)')
 
-        # Turn away from the pivot: pivot on the left (py > 0) -> clockwise.
+        # Turn away from the pivot: pivot on the left (py > 0) -> clockwise,
+        # which increases the pivot bearing.
         side = 1.0 if py >= 0.0 else -1.0
+        target_bearing = _normalize_angle(bearing + side * self._rotate_away_angle)
         start_yaw = self._tf(self._robot_pose)[2]
         self.get_logger().info(
             f'Pivot at ({px:.3f}, {py:.3f}) in {self._base_frame} '
             f'(bearing {math.degrees(bearing):.1f} deg): turning '
             f'{"clockwise" if side > 0 else "counter-clockwise"} by '
-            f'{180.0 - abs(math.degrees(bearing)):.1f} deg')
+            f'{math.degrees(self._rotate_away_angle):.1f} deg')
 
-        expected = (math.pi - abs(bearing)) / self._max_angular_speed
+        expected = self._rotate_away_angle / self._max_angular_speed
         deadline = time.monotonic() + self._timeout_factor * expected + 5.0
         rotated = 0.0
         last_yaw = start_yaw
@@ -359,13 +380,9 @@ class RetreatFromPivotServer(Node):
             rotated += _normalize_angle(yaw - last_yaw)
             last_yaw = yaw
 
-            # Target: pivot bearing == +-pi. Turning ccw decreases the bearing,
-            # so omega = k * error drives the error to zero.
-            error = _normalize_angle(bearing - math.pi)
-            if abs(error) > math.pi - 0.1:
-                # Pivot (almost) straight ahead: +-pi is ambiguous, use the
-                # direction decided at the start.
-                error = -side * abs(error)
+            # Turning ccw decreases the bearing, so omega = k * error drives
+            # the bearing to the target.
+            error = _normalize_angle(bearing - target_bearing)
             self._feedback(goal_handle, 'rotate', math.degrees(abs(error)))
             if abs(error) < self._rotate_threshold:
                 break
@@ -379,28 +396,35 @@ class RetreatFromPivotServer(Node):
         self._publish_stop()
         return rotated
 
-    def _drive_forward(self, goal_handle, distance):
-        """Drive straight forward by distance, holding the current heading."""
+    def _drive_straight(self, goal_handle, signed_distance, phase):
+        """Drive straight by signed_distance [m], holding the current heading.
+
+        Positive is forward, negative is backward. Returns the distance traveled.
+        """
+        direction = 1.0 if signed_distance >= 0.0 else -1.0
+        distance = abs(signed_distance)
         start_x, start_y, start_yaw = self._tf(self._robot_pose)
         expected = distance / self._linear_speed
         deadline = time.monotonic() + self._timeout_factor * expected + 5.0
         while True:
             self._check_cancel(goal_handle)
             if time.monotonic() > deadline:
-                raise _Failure('Timeout while driving forward')
+                raise _Failure(f'Timeout while driving ({phase})')
             x, y, yaw = self._tf(self._robot_pose)
-            # Progress along the start heading.
-            driven = (math.cos(start_yaw) * (x - start_x)
-                      + math.sin(start_yaw) * (y - start_y))
+            # Progress along the commanded direction.
+            along = (math.cos(start_yaw) * (x - start_x)
+                     + math.sin(start_yaw) * (y - start_y))
+            driven = direction * along
             remaining = distance - driven
-            self._feedback(goal_handle, 'drive', remaining)
+            self._feedback(goal_handle, phase, remaining)
             if remaining <= 0.0:
                 break
             omega = self._heading_p * _normalize_angle(start_yaw - yaw)
             omega = max(-self._max_angular_speed, min(self._max_angular_speed, omega))
             self._publish_command(
-                _ramped_speed(self._linear_speed, self._min_linear_speed,
-                              self._ramp_gain, remaining),
+                direction * _ramped_speed(
+                    self._linear_speed, self._min_linear_speed,
+                    self._ramp_gain, remaining),
                 omega)
             time.sleep(self._control_period)
 

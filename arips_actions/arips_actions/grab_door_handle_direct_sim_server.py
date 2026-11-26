@@ -131,8 +131,8 @@ class GrabDoorHandleDirectSimServer(Node):
                 ('door_z_offset', 0.0),
                 # Straight move of the gripper along its pointing direction after pre-grab
                 ('forward_distance', 0.045),
-                ('forward_velocity_scaling', 0.5),
-                ('forward_acceleration_scaling', 0.5),
+                ('forward_velocity_scaling', 1.0),
+                ('forward_acceleration_scaling', 1.0),
                 # Cartesian interpolation step and max joint change between two steps
                 ('forward_max_step', 0.002),
                 ('forward_revolute_jump_threshold', 0.3),
@@ -155,8 +155,8 @@ class GrabDoorHandleDirectSimServer(Node):
                 ('ik_attempts', 5),
                 ('planning_time_s', 5.0),
                 ('planning_attempts', 5),
-                ('max_velocity_scaling', 0.5),
-                ('max_acceleration_scaling', 0.5),
+                ('max_velocity_scaling', 1.0),
+                ('max_acceleration_scaling', 1.0),
                 # OMPL may end anywhere within this tolerance of the IK solution (m for the
                 # slider, rad otherwise); the lever slot leaves only ~1 mm, so keep it tight.
                 ('joint_goal_tolerance', 0.0005),

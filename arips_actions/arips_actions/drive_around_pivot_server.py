@@ -76,6 +76,9 @@ class DriveAroundPivotServer(Node):
                 ('timeout_factor', 3.0),
                 ('control_rate_hz', 20.0),
                 ('enable_stamped_cmd_vel', True),
+                # Input of the Nav2 velocity smoother (shared with controller_server and
+                # behavior_server), so commands do not compete with its output on /cmd_vel.
+                ('cmd_vel_topic', '/cmd_vel_nav'),
             ],
         )
         p = self.get_parameter
@@ -99,7 +102,7 @@ class DriveAroundPivotServer(Node):
 
         command_type = TwistStamped if self._use_twist_stamped else Twist
         self._cmd_vel_publisher = self.create_publisher(
-            command_type, '/cmd_vel', 10)
+            command_type, p('cmd_vel_topic').value, 10)
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
         self._action_server = ActionServer(
@@ -179,11 +182,15 @@ class DriveAroundPivotServer(Node):
             if goal_handle.is_cancel_requested:
                 return self._cancel(goal_handle, result)
             try:
-                _, _, _, bearing = self._pivot_in_base(pivot_x, pivot_y)
+                _, _, distance, bearing = self._pivot_in_base(pivot_x, pivot_y)
             except TransformException as error:
                 return self._abort(
                     goal_handle, result, f'TF lookup failed: {error}')
             bearing_error = _normalize_angle(bearing - desired_bearing)
+            distance_error = distance - start_distance
+            self.get_logger().info(
+                f'DriveAroundPivot align: distance error {distance_error:.3f} m, '
+                f'bearing error {math.degrees(bearing_error):.2f} deg')
             if abs(bearing_error) < self._align_threshold:
                 break
             omega = self._bearing_p * bearing_error
@@ -230,6 +237,9 @@ class DriveAroundPivotServer(Node):
             bearing_error = _normalize_angle(bearing - desired_bearing)
             max_distance_error = max(max_distance_error, abs(distance_error))
             max_bearing_error = max(max_bearing_error, abs(bearing_error))
+            self.get_logger().info(
+                f'DriveAroundPivot: distance error {distance_error:.3f} m, '
+                f'bearing error {math.degrees(bearing_error):.2f} deg')
 
             feedback = DriveAroundPivot.Feedback()
             feedback.travelled_angle_deg = math.degrees(abs(travelled))

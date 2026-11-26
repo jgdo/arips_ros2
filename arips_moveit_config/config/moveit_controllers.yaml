@@ -22,3 +22,6 @@ moveit_simple_controller_manager:
       - joint_door_gripper
     action_ns: door_gripper_cmd
     default: true
+
+trajectory_execution:
+  allowed_start_tolerance: 0.03

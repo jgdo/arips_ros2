@@ -67,6 +67,9 @@ class DriveForwardServer(Node):
                 ('tf_wait_timeout_s', 5.0),
                 ('control_rate_hz', 20.0),
                 ('enable_stamped_cmd_vel', True),
+                # Input of the Nav2 velocity smoother (shared with controller_server and
+                # behavior_server), so commands do not compete with its output on /cmd_vel.
+                ('cmd_vel_topic', '/cmd_vel_nav'),
             ],
         )
         p = lambda name: self.get_parameter(name).value  # noqa: E731
@@ -94,7 +97,7 @@ class DriveForwardServer(Node):
 
         callback_group = ReentrantCallbackGroup()
         command_type = TwistStamped if self._use_twist_stamped else Twist
-        self._cmd_vel_publisher = self.create_publisher(command_type, '/cmd_vel', 10)
+        self._cmd_vel_publisher = self.create_publisher(command_type, p('cmd_vel_topic'), 10)
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
         self._action_server = ActionServer(

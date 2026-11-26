@@ -33,6 +33,9 @@ class CrossDoorStepServer(Node):
                 ('min_forward_speed', 0.02),
                 ('ramp_gain', 1.5),
                 ('enable_stamped_cmd_vel', True),
+                # Input of the Nav2 velocity smoother (shared with controller_server and
+                # behavior_server), so commands do not compete with its output on /cmd_vel.
+                ('cmd_vel_topic', '/cmd_vel_nav'),
                 # Abort the goal with FAILURE if it is not finished within this time
                 # (seconds, node clock). <= 0 disables the timeout.
                 ('action_timeout', 20.0),
@@ -61,11 +64,12 @@ class CrossDoorStepServer(Node):
             raise ValueError('door_clearing_distance cannot be negative')
         self._control_period = 1.0 / control_rate_hz
 
+        cmd_vel_topic = self.get_parameter('cmd_vel_topic').value
         command_type = TwistStamped if self._use_twist_stamped else Twist
-        self._cmd_vel_publisher = self.create_publisher(command_type, '/cmd_vel', 10)
+        self._cmd_vel_publisher = self.create_publisher(command_type, cmd_vel_topic, 10)
         self.get_logger().info(
             f'Publishing {"TwistStamped" if self._use_twist_stamped else "Twist"} '
-            'commands on /cmd_vel')
+            f'commands on {cmd_vel_topic}')
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
         self._action_server = ActionServer(
