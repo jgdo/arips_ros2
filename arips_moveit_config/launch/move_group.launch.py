@@ -12,7 +12,7 @@ from pathlib import Path
 
 def generate_launch_description():
     description_share = get_package_share_directory("arips_description")
-    urdf_path = os.path.join(description_share, "urdf", "arips_onshape.urdf.xacro")
+    urdf_path = os.path.join(description_share, "urdf", "arips.urdf.xacro")
         
     moveit_config = (
         MoveItConfigsBuilder("arips", package_name="arips_moveit_config")

@@ -9,7 +9,7 @@
          leaf away from the body and MoveIt rejected the out-of-bounds start state afterwards. -->
     <xacro:arg name="arm_joint_effort" default="10" />
 
-    <xacro:include filename="$(find arips_description)/urdf/arips_onshape.urdf.xacro" />
+    <xacro:include filename="$(find arips_description)/urdf/arips.urdf.xacro" />
 
     <xacro:property name="PI" value="3.14159265359" />
     <xacro:property name="wheel_radius" value="0.055" />
@@ -240,8 +240,22 @@
         <xacro:position_joint name="joint_3" initial_value="1.8494" />
         <xacro:position_joint name="joint_4" initial_value="-1.4444" />
         <xacro:position_joint name="joint_door_gripper" />
+        <xacro:position_joint name="joint_claw_active" />
+        <!-- Mimics joint_claw_active (mimic tag in the URDF), gz_ros2_control moves it along.
+             Mimic joints must not have command interfaces. -->
+        <joint name="joint_claw_passive">
+            <state_interface name="position" />
+            <state_interface name="velocity" />
+        </joint>
         <xacro:position_joint name="kinect_joint" initial_value="${-PI / 3}" />
     </ros2_control>
+
+    <!-- No contacts between robot links: the door_gripper mesh is larger than the real gripper
+         and overlaps link_0..link_3 in some poses, which the real gripper never touches.
+         Bitmasks cannot exclude only these pairs, since all links must still hit the world. -->
+    <gazebo>
+        <self_collide>false</self_collide>
+    </gazebo>
 
     <gazebo>
         <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">

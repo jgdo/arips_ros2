@@ -20,7 +20,7 @@ def generate_launch_description():
     enable_mock_mode = LaunchConfiguration('enable_mock_mode')
 
     xacro_file = os.path.join(
-        get_package_share_directory('arips_description'), 'urdf', 'arips_onshape.urdf.xacro'
+        get_package_share_directory('arips_description'), 'urdf', 'arips.urdf.xacro'
     )
     controllers_file = os.path.join(
         get_package_share_directory('arips_launch'), 'config', 'ros2_control_controllers.yaml'
@@ -51,7 +51,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'arm_enabled',
             default_value='true',
-            description='Spawn the arm_forward_position_controller',
+            description='Spawn the arm_forward_position_controller and claw_forward_position_controller',
         ),
         DeclareLaunchArgument(
             'kinect_enabled',
@@ -113,6 +113,14 @@ finally:
             package='controller_manager',
             executable='spawner',
             arguments=['arm_forward_position_controller', '-p', controllers_file],
+            condition=IfCondition(arm_enabled),
+            output='screen',
+        ),
+
+        Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['claw_forward_position_controller', '-p', controllers_file],
             condition=IfCondition(arm_enabled),
             output='screen',
         ),

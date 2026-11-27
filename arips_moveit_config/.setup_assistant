@@ -1,7 +1,7 @@
 moveit_setup_assistant_config:
   urdf:
     package: arips_description
-    relative_path: urdf/arips_onshape.urdf.xacro
+    relative_path: urdf/arips.urdf.xacro
   srdf:
     relative_path: config/arips.srdf
   package_settings:

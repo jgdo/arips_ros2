@@ -11,7 +11,7 @@ from moveit_configs_utils import MoveItConfigsBuilder
 ROBOT_NAME = "arips"                       # must match <robot name=...> in URDF and SRDF
 MOVEIT_CONFIG_PACKAGE = "arips_moveit_config"
 DESCRIPTION_PACKAGE = "arips_description"
-URDF_RELATIVE_PATH = os.path.join("urdf", "arips_onshape.urdf.xacro")
+URDF_RELATIVE_PATH = os.path.join("urdf", "arips.urdf.xacro")
 # xacro arguments: must be identical to the ones used in your bringup (values as strings)
 XACRO_MAPPINGS = {
     # "use_fake_hardware": "false",

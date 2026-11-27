@@ -10,7 +10,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     urdf_path = os.path.join(
-        get_package_share_directory('arips_description'), 'urdf', 'arips_onshape.urdf.xacro')
+        get_package_share_directory('arips_description'), 'urdf', 'arips.urdf.xacro')
     params_file = os.path.join(
         get_package_share_directory('arips_teleop'), 'config', 'teleop.yaml')
 

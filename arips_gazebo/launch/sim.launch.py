@@ -182,6 +182,7 @@ def generate_launch_description():
             'feetech_joint_state_broadcaster',
             'arm_forward_position_controller',
             'kinect_forward_position_controller',
+            'claw_forward_position_controller',
             '--param-file', controllers_config,
         ],
         output='screen',

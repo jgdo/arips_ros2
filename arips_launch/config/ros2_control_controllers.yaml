@@ -11,6 +11,15 @@ controller_manager:
     kinect_forward_position_controller:
       type: forward_command_controller/ForwardCommandController
 
+    claw_forward_position_controller:
+      type: forward_command_controller/ForwardCommandController
+
+claw_forward_position_controller:
+  ros__parameters:
+    joints:
+      - joint_claw_active
+    interface_name: position
+
 arm_forward_position_controller:
   ros__parameters:
     joints:
