@@ -30,16 +30,25 @@ class TeleopNode(Node):
         self._param('linear_scale', 0.05)
         self._param('angular_scale', 0.05)
         command_topic = self._param('command_topic', '/arm_forward_position_controller/commands')
-        # Kinect tilt joint, controlled independently of the arm enable button
+        # Kinect tilt and claw, jogged independently of the arm enable button.
+        # Joy inputs are 'buttonN', 'axisN' or '-axisN' (reversed axis).
         self.kinect_joint = self._param('kinect_joint', 'kinect_joint')
         kinect_topic = self._param('kinect_command_topic',
                                    '/kinect_forward_position_controller/commands')
-        # Joy inputs as 'buttonN', 'axisN' or '-axisN' (reversed axis)
         self._param('kinect_up_button', 'button11')
         self._param('kinect_down_button', 'button12')
         self._param('kinect_rate', 0.5)  # rad/s at full input
         self._param('kinect_min', -1.65806)
         self._param('kinect_max', 0.5236)
+        # Opening increases joint_claw_active toward claw_max
+        self.claw_joint = self._param('claw_joint', 'joint_claw_active')
+        claw_topic = self._param('claw_command_topic',
+                                 '/claw_forward_position_controller/commands')
+        self._param('claw_open_button', 'button13')
+        self._param('claw_close_button', 'button14')
+        self._param('claw_rate', 0.5)  # rad/s at full input
+        self._param('claw_min', 0.0)
+        self._param('claw_max', 1.0472)
         joint_states_topic = self._param('joint_states_topic', '/joint_states')
 
         robot_description = self._param('robot_description', '')
@@ -62,10 +71,14 @@ class TeleopNode(Node):
         self.kinect_measured = None
         # Commanded kinect angle, cached while a kinect input is active
         self.kinect_cached = None
+        self.claw_measured = None
+        # Commanded claw angle, cached while a claw input is active
+        self.claw_cached = None
 
         self.pub = self.create_publisher(Float64MultiArray, command_topic, 10)
         self.target_pose_pub = self.create_publisher(PoseStamped, 'teleop_target_position', 10)
         self.kinect_pub = self.create_publisher(Float64MultiArray, kinect_topic, 10)
+        self.claw_pub = self.create_publisher(Float64MultiArray, claw_topic, 10)
         self.create_subscription(JointState, joint_states_topic, self.on_joint_state, 10)
         self.create_subscription(Joy, '/joy', self.joy_callback, 10)
         self.create_timer(self.dt, self.update)
@@ -85,6 +98,8 @@ class TeleopNode(Node):
         received = dict(zip(msg.name, msg.position))
         if self.kinect_joint in received:
             self.kinect_measured = received[self.kinect_joint]
+        if self.claw_joint in received:
+            self.claw_measured = received[self.claw_joint]
         self.latest.update((j, received[j]) for j in self.joint_names if j in received)
         if all(j in received for j in self.group_joints):
             self.have_joint_state = True
@@ -128,34 +143,53 @@ class TeleopNode(Node):
                 'expected buttonN, axisN or -axisN', throttle_duration_sec=5.0)
             return 0.0
 
-    def update_kinect(self):
+    def update_jog(self, measured, cached, up_param, down_param, rate_param,
+                   min_param, max_param, joint_name, publisher):
+        """Jog one joint from two joy inputs. Returns the commanded angle, or None when idle.
+
+        The cache is dropped when the input is released so the next press re-syncs from
+        the measured joint state. These inputs do not require the arm enable button.
+        """
         msg = self.last_joy
         direction = 0.0
         if msg is not None:
             age = (self.get_clock().now() - self.last_joy_time).nanoseconds * 1e-9
             if age <= self.joy_timeout:
-                direction = (self._input(msg, 'kinect_up_button')
-                             - self._input(msg, 'kinect_down_button'))
+                direction = self._input(msg, up_param) - self._input(msg, down_param)
         if direction == 0:
-            # Re-sync from the measured angle on the next press
-            self.kinect_cached = None
-            return
-        if self.kinect_cached is None:
-            if self.kinect_measured is None:
+            return None
+        if cached is None:
+            if measured is None:
                 self.get_logger().warning(
-                    f'No joint state for {self.kinect_joint} yet', throttle_duration_sec=2.0)
-                return
-            self.kinect_cached = self.kinect_measured
-        rate = self.get_parameter('kinect_rate').value
-        low = self.get_parameter('kinect_min').value
-        high = self.get_parameter('kinect_max').value
-        self.kinect_cached = min(max(self.kinect_cached + direction * rate * self.dt, low), high)
+                    f'No joint state for {joint_name} yet', throttle_duration_sec=2.0)
+                return None
+            cached = measured
+        rate = self.get_parameter(rate_param).value
+        low = self.get_parameter(min_param).value
+        high = self.get_parameter(max_param).value
+        cached = min(max(cached + direction * rate * self.dt, low), high)
         out = Float64MultiArray()
-        out.data = [float(self.kinect_cached)]
-        self.kinect_pub.publish(out)
+        out.data = [float(cached)]
+        publisher.publish(out)
+        return cached
+
+    def update_kinect(self):
+        self.kinect_cached = self.update_jog(
+            self.kinect_measured, self.kinect_cached,
+            'kinect_up_button', 'kinect_down_button',
+            'kinect_rate', 'kinect_min', 'kinect_max',
+            self.kinect_joint, self.kinect_pub)
+
+    def update_claw(self):
+        self.claw_cached = self.update_jog(
+            self.claw_measured, self.claw_cached,
+            'claw_open_button', 'claw_close_button',
+            'claw_rate', 'claw_min', 'claw_max',
+            self.claw_joint, self.claw_pub)
 
     def update(self):
         self.update_kinect()
+        self.update_claw()
         msg = self.last_joy
         if msg is None or not self._enabled(msg):
             return

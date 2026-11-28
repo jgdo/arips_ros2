@@ -21,6 +21,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'kinect_down_button', default_value='button12',
             description="Joy input lowering the kinect: 'buttonN', 'axisN' or '-axisN'"),
+        DeclareLaunchArgument(
+            'claw_open_button', default_value='button13',
+            description="Joy input opening the claw: 'buttonN', 'axisN' or '-axisN'"),
+        DeclareLaunchArgument(
+            'claw_close_button', default_value='button14',
+            description="Joy input closing the claw: 'buttonN', 'axisN' or '-axisN'"),
         Node(
             package='arips_teleop',
             executable='arm_teleop_node',
@@ -34,6 +40,10 @@ def generate_launch_description():
                         LaunchConfiguration('kinect_up_button'), value_type=str),
                     'kinect_down_button': ParameterValue(
                         LaunchConfiguration('kinect_down_button'), value_type=str),
+                    'claw_open_button': ParameterValue(
+                        LaunchConfiguration('claw_open_button'), value_type=str),
+                    'claw_close_button': ParameterValue(
+                        LaunchConfiguration('claw_close_button'), value_type=str),
                 },
             ],
         ),

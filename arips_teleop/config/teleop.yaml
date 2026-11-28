@@ -23,3 +23,12 @@ arips_arm_teleop:
     kinect_rate: 0.5         # rad/s at full button/axis input
     kinect_min: -1.65806     # rad, URDF limits
     kinect_max: 0.5236
+    claw_joint: joint_claw_active
+    claw_command_topic: /claw_forward_position_controller/commands
+    # claw_open_button / claw_close_button ('buttonN', 'axisN' or '-axisN') are set by the
+    # launch arguments of the same name (default button13 / button14); they work without
+    # enable_button. Not set here, as this file would take precedence over the launch arguments.
+    # Opening increases joint_claw_active.
+    claw_rate: 0.5           # rad/s at full button/axis input
+    claw_min: 0.0            # rad, URDF limits
+    claw_max: 1.0472
